@@ -1,10 +1,8 @@
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
-// Generate 6-digit OTP
 exports.generateOTP = () => crypto.randomInt(10000, 99999).toString();
 
-// Send OTP via Email
 exports.sendOTP = async (email, otp) => {
     const transporter = nodemailer.createTransport({
         service: 'gmail',

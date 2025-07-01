@@ -3,10 +3,8 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { connectDB } = require('./config/connectDB');
 
-// Load environment variables
 dotenv.config();
 
-// Initialize express app
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -14,21 +12,17 @@ const PORT = process.env.PORT || 3000;
     try {
         await connectDB();
 
-        // Middleware
         app.use(cors());
         app.use(express.json());
         // app.use('/uploads', express.static('uploads'));
 
-        // Test route
         app.get('/', (req, res) => {
             res.send('Welcome back to Perfect Host API!');
         });
 
-        // Routes
         const authRoutes = require('./routes/v1/authRoute');
         app.use('/api/auth', authRoutes);
 
-        // Global error handler
         app.use((err, req, res, next) => {
             console.error(err.stack);
             res.status(500).json({ error: "Internal Server Error" });

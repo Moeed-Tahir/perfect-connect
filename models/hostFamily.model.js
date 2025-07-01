@@ -3,10 +3,17 @@ const mongoose = require('mongoose');
 const hostFamilySchema = new mongoose.Schema({
     email: {
         type: String,
-        required: true,
+        required: false,
         unique: true,
         trim: true,
         match: [/.+\@.+\..+/, 'Please enter a valid email address']
+    },
+    phone: {
+        type: String,
+        required: false,
+        unique: true,
+        trim: true,
+        sparse: true
     },
     otp: {
         type: String,
