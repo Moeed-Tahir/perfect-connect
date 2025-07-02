@@ -7,5 +7,6 @@ router.post("/loginHostFamily", authController.loginHostFamily);
 router.post("/verify-email", authController.verifyEmail);
 router.post("/verify-otp", authController.verifyOTP);
 router.post("/resend-otp", authController.resendOTP);
+router.post("/toggleHostFamilyCategory", authController.toggleHostFamilyCategory);
 
 module.exports = router;

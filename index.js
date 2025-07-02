@@ -23,6 +23,9 @@ const PORT = process.env.PORT || 3000;
         const authRoutes = require('./routes/v1/authRoute');
         app.use('/api/auth', authRoutes);
 
+        const hostFamilyRoutes = require('./routes/v1/hostFamilyRoute');
+        app.use('/api', hostFamilyRoutes);
+
         app.use((err, req, res, next) => {
             console.error(err.stack);
             res.status(500).json({ error: "Internal Server Error" });
