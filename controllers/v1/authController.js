@@ -30,6 +30,11 @@ const signUpHostFamilyWithEmail = async (req, res) => {
         const { email } = req.body;
         if (!email) return res.status(400).json({ message: "Email is required" });
 
+        const existingUser = await HostFamily.findOne({ "user.email": email });
+        if (existingUser) {
+            return res.status(400).json({ message: "Email already exists" });
+        }
+
         const otp = generateOTP();
         let userDoc = await HostFamily.findOne({ "user.email": email });
 
@@ -80,7 +85,6 @@ const signUpHostFamilyWithEmail = async (req, res) => {
                 galleryPhotos: []
             }
         };
-
 
         const defaultPairHeavenData = {
             familyProfile: "",
@@ -158,7 +162,6 @@ const signUpHostFamilyWithEmail = async (req, res) => {
             }
         };
 
-
         if (userDoc) {
             userDoc.user.otp = otp;
             userDoc.user.otpExpires = new Date(Date.now() + 5 * 60 * 1000);
@@ -192,6 +195,11 @@ const signUpHostFamilyWithPhone = async (req, res) => {
     try {
         const { phone } = req.body;
         if (!phone) return res.status(400).json({ message: "Phone number is required" });
+
+        const existingUser = await HostFamily.findOne({ "user.phone": phone });
+        if (existingUser) {
+            return res.status(400).json({ message: "Phone number already exists" });
+        }
 
         const otp = generateOTP();
         let userDoc = await HostFamily.findOne({ "user.phone": phone });
@@ -244,7 +252,6 @@ const signUpHostFamilyWithPhone = async (req, res) => {
             }
         };
 
-
         const defaultPairHeavenData = {
             familyProfile: "",
             firstParents: {
@@ -320,7 +327,6 @@ const signUpHostFamilyWithPhone = async (req, res) => {
                 galleryPhotos: []
             }
         };
-
 
         if (userDoc) {
             userDoc.user.otp = otp;
