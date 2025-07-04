@@ -240,7 +240,6 @@ const userSchema = new mongoose.Schema({
         required: false,
         unique: true,
         trim: true,
-        sparse: true
     },
     age: {
         type: Number,
@@ -304,9 +303,6 @@ const userSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-// Indexes
-userSchema.index({ email: 1 }, { unique: true });
-userSchema.index({ contactNo: 1 }, { unique: true, sparse: true });
 
 const User = mongoose.model('User', userSchema);
 

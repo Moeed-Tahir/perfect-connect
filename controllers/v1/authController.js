@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 // const HostFamily = require("../../models/User.model.js");
 const User = require("../../models/User.model.js");
-const { generateOTP, sendOTP } = require('../../services/otpService.js');
+const { generateOTP, sendOTP, sendOTPViaMessage } = require('../../services/otpService.js');
 const { generateAuthToken } = require('../../services/authToken.js');
 
 // const loginHostFamily = async (req, res) => {
@@ -321,6 +321,147 @@ const verifyEmailOTP = async (req, res) => {
     }
 };
 
+const resendEmailOTP = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        // Validate input
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: "Email is required"
+            });
+        }
+
+        // Find user by email
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        // Check if already verified
+        if (user.isOtpVerified) {
+            return res.status(400).json({
+                success: false,
+                message: "Email is already verified"
+            });
+        }
+
+        // Generate new OTP
+        const otp = generateOTP();
+        user.otp = otp;
+        user.otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
+        await user.save();
+
+        // Send OTP (in production, implement actual sending)
+        await sendOTP(email, otp);
+
+        res.status(200).json({
+            success: true,
+            message: "New OTP sent to your email",
+            data: { email }
+        });
+
+    } catch (error) {
+        console.error("Resend email OTP error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+const initiateMobileVerification = async (req, res) => {
+    try {
+        const { phone, userId } = req.body;
+        if (!phone || !userId) {
+            return res.status(400).json({ message: "Phone number and user ID are required" });
+        }
+
+        // Find user by ID
+        const user = await User.findOne({ _id: userId });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Generate OTP
+        const otp = generateOTP();
+        user.contactNo = phone;
+        user.mobileOtp = otp;
+        user.mobileOtpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
+        user.isMobileVerified = false;
+        await user.save();
+
+        // Send OTP via SMS
+        // await sendOTPViaMessage(phone, otp);
+        res.status(200).json({
+            message: "OTP sent to your phone",
+            token: generateAuthToken(user._id), // Generate token for the user
+            user: {
+                id: user._id,
+                phone: user.contactNo,
+                requiresOtp: true,
+                otp: otp // Don't send OTP in production response
+
+            }
+        });
+    } catch (error) {
+        console.error("Error initiating mobile verification:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+
+}
+
+const verifyMobileOTP = async (req, res) => {
+    try {
+        const { phone, otp, userId } = req.body;
+
+        // Validate input
+        if (!phone || !otp || !userId) {
+            return res.status(400).json({ message: "Phone number and OTP are required" });
+        }
+
+        // Find user by phone
+        const user = await User.findOne({ _id: userId, contactNo: phone });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        // Check if already verified
+        if (user.isMobileVerified) {
+            return res.status(400).json({ message: "Phone number is already verified" });
+        }
+        // Check OTP validity
+        if (user.mobileOtp !== otp || user.mobileOtpExpires < new Date()) {
+
+            return res.status(400).json({ message: "Invalid or expired OTP", requiresResend: true });
+        }
+        // Update user and generate token
+        user.isMobileVerified = true;
+        user.mobileOtp = undefined; // Clear OTP after verification
+        user.mobileOtpExpires = undefined;
+        await user.save();
+        const token = generateAuthToken(user._id);
+        // Return success response
+        res.status(200).json({
+            message: "Mobile number verified successfully",
+            user: {
+                id: user._id,
+                phone: user.contactNo,
+                isMobileVerified: user.isMobileVerified
+            },
+            token
+        });
+
+    } catch (error) {
+        console.error("Mobile OTP verification error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+}
+
 // const signUpHostFamilyWithPhone = async (req, res) => {
 //     try {
 //         const { phone } = req.body;
@@ -619,59 +760,6 @@ const verifyOTP = async (req, res) => {
 //     }
 // };
 
-const resendEmailOTP = async (req, res) => {
-    try {
-        const { email } = req.body;
-
-        // Validate input
-        if (!email) {
-            return res.status(400).json({
-                success: false,
-                message: "Email is required"
-            });
-        }
-
-        // Find user by email
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            });
-        }
-
-        // Check if already verified
-        if (user.isOtpVerified) {
-            return res.status(400).json({
-                success: false,
-                message: "Email is already verified"
-            });
-        }
-
-        // Generate new OTP
-        const otp = generateOTP();
-        user.otp = otp;
-        user.otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
-        await user.save();
-
-        // Send OTP (in production, implement actual sending)
-        await sendOTP(email, otp);
-
-        res.status(200).json({
-            success: true,
-            message: "New OTP sent to your email",
-            data: { email }
-        });
-
-    } catch (error) {
-        console.error("Resend email OTP error:", error);
-        res.status(500).json({
-            success: false,
-            message: "Internal server error",
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
-    }
-};
 
 
 module.exports = {
@@ -679,7 +767,9 @@ module.exports = {
     // signUpHostFamilyWithEmail,
     signUpWithEmail,
     verifyEmailOTP,
-    resendEmailOTP
+    resendEmailOTP,
+    initiateMobileVerification,
+    verifyMobileOTP
     // signUpHostFamilyWithPhone,
     // verifyEmail,
     // verifyOTP,
