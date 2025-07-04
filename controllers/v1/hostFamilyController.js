@@ -1,5 +1,4 @@
-const HostFamily = require("../../models/hostFamilyUser.model.js");
-
+const HostFamily = require("../../models/User.model.js");
 
 const createHostHeavenData = async (req, res) => {
     try {
