@@ -1,204 +1,18 @@
 const jwt = require('jsonwebtoken');
-// const HostFamily = require("../../models/User.model.js");
 const User = require("../../models/User.model.js");
 const { generateOTP, sendOTP, sendOTPViaMessage } = require('../../services/otpService.js');
 const { generateAuthToken } = require('../../services/authToken.js');
 
-// const loginHostFamily = async (req, res) => {
-//     try {
-//         const { email } = req.body;
-//         if (!email) return res.status(400).json({ message: "Email is required" });
-
-//         const userDoc = await HostFamily.findOne({ "user.email": email });
-//         if (!userDoc) return res.status(404).json({ message: "User not found" });
-
-//         const otp = generateOTP();
-//         userDoc.user.otp = otp;
-//         userDoc.user.otpExpires = new Date(Date.now() + 5 * 60 * 1000);
-//         userDoc.user.isOtpVerified = false;
-//         await userDoc.save();
-
-//         await sendOTP(email, otp);
-
-//         res.status(200).json({ message: "OTP sent to your email", requiresOtp: true, email });
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ message: "Internal Server Error" });
-//     }
-// };
-
-// const signUpHostFamilyWithEmail = async (req, res) => {
-//     try {
-//         const { email } = req.body;
-//         if (!email) return res.status(400).json({ message: "Email is required" });
-
-//         const otp = generateOTP();
-//         let userDoc = await HostFamily.findOne({ "user.email": email });
-
-//         const defaultPairConnectData = {
-//             myProfileInformation: {
-//                 firstName: "",
-//                 lastName: "",
-//                 age: null,
-//                 nationality: ""
-//             },
-//             agency: {
-//                 agencyName: "",
-//                 agencyNumber: "",
-//                 currentStatus: "",
-//                 wouldChangeAgency: false,
-//                 preferredAgency: ""
-//             },
-//             language: {
-//                 primaryLanguage: "",
-//                 secondaryLanguage: ""
-//             },
-//             availability: {
-//                 availableFrom: null,
-//                 durationYears: null,
-//                 durationMonths: null
-//             },
-//             location: {
-//                 zipCode: "",
-//                 state: "",
-//                 city: "",
-//                 aboutArea: ""
-//             },
-//             experienceAndSkills: {
-//                 skills: []
-//             },
-//             temperament: {
-//                 tags: []
-//             },
-//             religion: {
-//                 faith: ""
-//             },
-//             pets: {
-//                 hasPets: false,
-//                 petTypes: []
-//             },
-//             familyPhotos: {
-//                 mainPhoto: "",
-//                 galleryPhotos: []
-//             }
-//         };
-
-
-//         const defaultPairHeavenData = {
-//             familyProfile: "",
-//             firstParents: {
-//                 firstName: "",
-//                 lastName: "",
-//                 showInPublicity: false,
-//                 age: null,
-//                 nationality: "",
-//                 occupation: "",
-//                 dailyLifestyle: ""
-//             },
-//             secondParents: {
-//                 firstName: "",
-//                 lastName: "",
-//                 showInPublicity: false,
-//                 age: null,
-//                 nationality: "",
-//                 occupation: "",
-//                 dailyLifestyle: ""
-//             },
-//             languages: {
-//                 primaryLanguage: "",
-//                 secondaryLanguage: ""
-//             },
-//             agency: {
-//                 agencyName: "",
-//                 agencyNumber: "",
-//                 currentStatus: "",
-//                 wouldChangeAgency: false,
-//                 preferredAgency: ""
-//             },
-//             availability: {
-//                 availableFrom: null,
-//                 durationYears: null,
-//                 durationMonths: null
-//             },
-//             numberOfChildren: 0,
-//             children: [],
-//             schedule: {
-//                 monday: { activities: [] },
-//                 tuesday: { activities: [] },
-//                 wednesday: { activities: [] },
-//                 thursday: { activities: [] },
-//                 friday: { activities: [] },
-//                 saturday: { activities: [] },
-//                 sunday: { activities: [] }
-//             },
-//             dietaryPreferences: {
-//                 preferences: []
-//             },
-//             religion: {
-//                 faith: ""
-//             },
-//             pets: {
-//                 hasPets: false,
-//                 petTypes: []
-//             },
-//             location: {
-//                 zipCode: "",
-//                 state: "",
-//                 city: "",
-//                 aboutArea: ""
-//             },
-//             benefits: {
-//                 benefits: []
-//             },
-//             householdAtmosphere: {
-//                 atmosphereType: "",
-//                 description: ""
-//             },
-//             familyPhotos: {
-//                 mainPhoto: "",
-//                 galleryPhotos: []
-//             }
-//         };
-
-
-//         if (userDoc) {
-//             userDoc.user.otp = otp;
-//             userDoc.user.otpExpires = new Date(Date.now() + 5 * 60 * 1000);
-//             userDoc.user.isOtpVerified = false;
-//         } else {
-//             userDoc = new HostFamily({
-//                 user: {
-//                     email,
-//                     otp,
-//                     otpExpires: new Date(Date.now() + 5 * 60 * 1000),
-//                     isOtpVerified: false,
-//                     pairConnectEnabled: false,
-//                     pairConnectData: defaultPairConnectData,
-//                     pairHeavenEnabled: false,
-//                     pairHeavenData: defaultPairHeavenData
-//                 }
-//             });
-//         }
-
-//         await userDoc.save();
-//         await sendOTP(email, otp);
-
-//         res.status(200).json({ message: "OTP sent to your email", requiresOtp: true, email, otp });
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ message: "Internal Server Error" });
-//     }
-// };
 
 const signUpWithEmail = async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email, isHostFamily, isAuPair } = req.body;
 
         // Validate email presence
-        if (!email) {
+        if (!email || !isHostFamily || !isAuPair) {
             return res.status(400).json({
                 success: false,
-                message: "Email is required"
+                message: "Email, isHostFamily, or isAuPair are required"
             });
         }
 
@@ -218,6 +32,8 @@ const signUpWithEmail = async (req, res) => {
         // Create new user with only essential fields
         const newUser = new User({
             email,
+            isHostFamily,
+            isAuPair,
             otp,
             otpExpires,
             isOtpVerified: false,
@@ -236,7 +52,9 @@ const signUpWithEmail = async (req, res) => {
             message: "OTP sent to your email",
             data: {
                 email,
-                requiresOtp: true
+                requiresOtp: true,
+                isHostFamily: newUser.isHostFamily,
+                isAuPair: newUser.isAuPair,
                 // Don't include OTP in production response
             }
         });
@@ -259,6 +77,7 @@ const verifyEmailOTP = async (req, res) => {
         if (!email || !otp) {
             return res.status(400).json({
                 success: false,
+                code: "MISSING_FIELDS",
                 message: "Email and OTP are required"
             });
         }
@@ -268,46 +87,68 @@ const verifyEmailOTP = async (req, res) => {
         if (!user) {
             return res.status(404).json({
                 success: false,
+                code: "USER_NOT_FOUND",
                 message: "User not found"
             });
         }
 
-        // Check if already verified
-        if (user.isOtpVerified) {
-            return res.status(400).json({
-                success: false,
-                message: "Email is already verified"
-            });
-        }
-
         // Check OTP validity
-        if (user.otp !== otp || user.otpExpires < new Date()) {
+        if (user.otp !== otp) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid or expired OTP",
+                code: "INVALID_OTP",
+                message: "Invalid OTP",
                 requiresResend: true
             });
         }
 
-        // Update user and generate token
+        if (user.otpExpires < new Date()) {
+            return res.status(400).json({
+                success: false,
+                code: "EXPIRED_OTP",
+                message: "OTP has expired",
+                requiresResend: true
+            });
+        }
+
+        // Update verification status
         user.isOtpVerified = true;
-        user.otp = undefined; // Clear OTP after verification
+        user.otp = undefined;
         user.otpExpires = undefined;
+
+        // For new signups, set default values if needed
+        if (!user.isHostFamily && !user.isAuPair) {
+            user.isHostFamily = false;
+            user.isAuPair = false;
+        }
+
         await user.save();
 
+        // Generate token
         const token = generateAuthToken(user._id);
 
-        // Return success response
+        // Prepare user data response
+        const userData = {
+            id: user._id,
+            email: user.email,
+            contactNo: user.contactNo,
+            isMobileVerified: user.isMobileVerified,
+            isOtpVerified: user.isOtpVerified,
+            isHostFamily: user.isHostFamily,
+            isAuPair: user.isAuPair,
+            hostFamily: user.hostFamily || null,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
+        };
+
+        // Return success response with complete user data
         res.status(200).json({
             success: true,
-            message: "Email verified successfully",
+            message: user.isOtpVerified ? "Login successful" : "Email verified successfully",
             data: {
                 token,
-                user: {
-                    id: user._id,
-                    email: user.email,
-                    isVerified: user.isOtpVerified
-                }
+                user: userData,
+                isNewUser: !user.isOtpVerified // Flag to indicate if this was initial verification
             }
         });
 
@@ -315,11 +156,13 @@ const verifyEmailOTP = async (req, res) => {
         console.error("Email OTP verification error:", error);
         res.status(500).json({
             success: false,
+            code: "SERVER_ERROR",
             message: "Internal server error",
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };
+
 
 const resendEmailOTP = async (req, res) => {
     try {
@@ -462,317 +305,62 @@ const verifyMobileOTP = async (req, res) => {
     }
 }
 
-// const signUpHostFamilyWithPhone = async (req, res) => {
-//     try {
-//         const { phone } = req.body;
-//         if (!phone) return res.status(400).json({ message: "Phone number is required" });
-
-//         const otp = generateOTP();
-//         let userDoc = await HostFamily.findOne({ "user.phone": phone });
-
-//         const defaultPairConnectData = {
-//             myProfileInformation: {
-//                 firstName: "",
-//                 lastName: "",
-//                 age: null,
-//                 nationality: ""
-//             },
-//             agency: {
-//                 agencyName: "",
-//                 agencyNumber: "",
-//                 currentStatus: "",
-//                 wouldChangeAgency: false,
-//                 preferredAgency: ""
-//             },
-//             language: {
-//                 primaryLanguage: "",
-//                 secondaryLanguage: ""
-//             },
-//             availability: {
-//                 availableFrom: null,
-//                 durationYears: null,
-//                 durationMonths: null
-//             },
-//             location: {
-//                 zipCode: "",
-//                 state: "",
-//                 city: "",
-//                 aboutArea: ""
-//             },
-//             experienceAndSkills: {
-//                 skills: []
-//             },
-//             temperament: {
-//                 tags: []
-//             },
-//             religion: {
-//                 faith: ""
-//             },
-//             pets: {
-//                 hasPets: false,
-//                 petTypes: []
-//             },
-//             familyPhotos: {
-//                 mainPhoto: "",
-//                 galleryPhotos: []
-//             }
-//         };
-
-
-//         const defaultPairHeavenData = {
-//             familyProfile: "",
-//             firstParents: {
-//                 firstName: "",
-//                 lastName: "",
-//                 showInPublicity: false,
-//                 age: null,
-//                 nationality: "",
-//                 occupation: "",
-//                 dailyLifestyle: ""
-//             },
-//             secondParents: {
-//                 firstName: "",
-//                 lastName: "",
-//                 showInPublicity: false,
-//                 age: null,
-//                 nationality: "",
-//                 occupation: "",
-//                 dailyLifestyle: ""
-//             },
-//             languages: {
-//                 primaryLanguage: "",
-//                 secondaryLanguage: ""
-//             },
-//             agency: {
-//                 agencyName: "",
-//                 agencyNumber: "",
-//                 currentStatus: "",
-//                 wouldChangeAgency: false,
-//                 preferredAgency: ""
-//             },
-//             availability: {
-//                 availableFrom: null,
-//                 durationYears: null,
-//                 durationMonths: null
-//             },
-//             numberOfChildren: 0,
-//             children: [],
-//             schedule: {
-//                 monday: { activities: [] },
-//                 tuesday: { activities: [] },
-//                 wednesday: { activities: [] },
-//                 thursday: { activities: [] },
-//                 friday: { activities: [] },
-//                 saturday: { activities: [] },
-//                 sunday: { activities: [] }
-//             },
-//             dietaryPreferences: {
-//                 preferences: []
-//             },
-//             religion: {
-//                 faith: ""
-//             },
-//             pets: {
-//                 hasPets: false,
-//                 petTypes: []
-//             },
-//             location: {
-//                 zipCode: "",
-//                 state: "",
-//                 city: "",
-//                 aboutArea: ""
-//             },
-//             benefits: {
-//                 benefits: []
-//             },
-//             householdAtmosphere: {
-//                 atmosphereType: "",
-//                 description: ""
-//             },
-//             familyPhotos: {
-//                 mainPhoto: "",
-//                 galleryPhotos: []
-//             }
-//         };
-
-
-//         if (userDoc) {
-//             userDoc.user.otp = otp;
-//             userDoc.user.otpExpires = new Date(Date.now() + 5 * 60 * 1000);
-//             userDoc.user.isOtpVerified = false;
-//         } else {
-//             userDoc = new HostFamily({
-//                 user: {
-//                     phone,
-//                     otp,
-//                     otpExpires: new Date(Date.now() + 5 * 60 * 1000),
-//                     isOtpVerified: false,
-//                     pairConnectEnabled: false,
-//                     pairConnectData: defaultPairConnectData,
-//                     pairHeavenEnabled: false,
-//                     pairHeavenData: defaultPairHeavenData
-//                 }
-//             });
-//         }
-
-//         await userDoc.save();
-
-//         res.status(200).json({ message: "OTP generated for phone verification", requiresOtp: true, phone, otp });
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ message: "Internal Server Error" });
-//     }
-// };
-
-// const toggleHostFamilyCategory = async (req, res) => {
-//     try {
-//         const { userId, pairConnect = false, pairHeaven = false } = req.body;
-
-//         if (!userId) {
-//             return res.status(400).json({ message: "User ID is required" });
-//         }
-
-//         const hostFamily = await HostFamily.findById(userId);
-//         if (!hostFamily) {
-//             return res.status(404).json({ message: "Host family not found" });
-//         }
-
-//         hostFamily.user.pairConnectEnabled = pairConnect;
-//         hostFamily.user.pairHeavenEnabled = pairHeaven;
-
-//         await hostFamily.save();
-
-//         return res.status(200).json({
-//             message: "Categories updated successfully",
-//             data: {
-//                 pairConnectEnabled: hostFamily.user.pairConnectEnabled,
-//                 pairHeavenEnabled: hostFamily.user.pairHeavenEnabled
-//             }
-//         });
-
-//     } catch (error) {
-//         console.error("Error toggling host family category:", error);
-//         return res.status(500).json({ message: "Internal server error", error: error.message });
-//     }
-// };
-
-// const verifyEmail = async (req, res) => {
-//     try {
-//         const { email } = req.body;
-//         if (!email) return res.status(400).json({ message: "Email is required" });
-
-//         const otp = generateOTP();
-//         let userDoc = await HostFamily.findOne({ "user.email": email });
-
-//         if (userDoc) {
-//             userDoc.user.otp = otp;
-//             userDoc.user.otpExpires = new Date(Date.now() + 5 * 60 * 1000);
-//         } else {
-//             userDoc = new HostFamily({
-//                 user: {
-//                     email,
-//                     otp,
-//                     otpExpires: new Date(Date.now() + 5 * 60 * 1000)
-//                 }
-//             });
-//         }
-
-//         await userDoc.save();
-//         await sendOTP(email, otp);
-
-//         res.status(200).json({ message: "OTP sent to your email", requiresOtp: true, email });
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ message: "Internal Server Error" });
-//     }
-// };
-
-const verifyOTP = async (req, res) => {
+const loginWithEmail = async (req, res) => {
     try {
-        const { email, phone, otp } = req.body;
+        const { email } = req.body;
 
-        let userDoc;
-        if (email) {
-            userDoc = await HostFamily.findOne({ "user.email": email });
-        } else if (phone) {
-            userDoc = await HostFamily.findOne({ "user.phone": phone });
-        } else {
-            return res.status(400).json({ message: "Email or phone is required" });
+        // Validate email presence
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: "Email is required"
+            });
         }
 
-        if (!userDoc || userDoc.user.otp !== otp || userDoc.user.isOtpVerified) {
-            return res.status(400).json({ message: "Invalid or expired OTP", requiresResend: true });
+        // Find user by email
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
         }
 
-        if (userDoc.user.otpExpires < new Date()) {
-            return res.status(400).json({ message: "OTP has expired", requiresResend: true });
-        }
+        // genrate OTP for login
+        const otp = generateOTP();
+        user.otp = otp;
+        user.otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
+        user.isOtpVerified = false; // Reset OTP verification status
+        await user.save();
 
-        const token = jwt.sign({ userId: userDoc._id }, process.env.SECRET_KEY, { expiresIn: '1h' });
-        userDoc.user.isOtpVerified = true;
-        await userDoc.save();
+        await sendOTP(email, otp);
 
-        const userData = {
-            id: userDoc._id,
-            email: userDoc.user.email,
-            phone: userDoc.user.phone
-        };
+        res.status(200).json({
+            success: true,
+            message: "OTP sent to your email for login",
+            data: {
+                email,
+                requiresOtp: true,
+                userId: user._id
+            }
+        });
 
-        res.status(200).json({ message: "OTP verified successfully", user: userData, token });
+
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Internal Server Error" });
+        console.error("Login error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
-};
-
-// const resendOTP = async (req, res) => {
-//     try {
-//         const { email, phone } = req.body;
-
-//         let userDoc;
-//         if (email) {
-//             userDoc = await HostFamily.findOne({ "user.email": email });
-//         } else if (phone) {
-//             userDoc = await HostFamily.findOne({ "user.phone": phone });
-//         } else {
-//             return res.status(400).json({ message: "Email or phone is required" });
-//         }
-
-//         if (!userDoc) {
-//             return res.status(404).json({ message: "User not found", requiresResend: false });
-//         }
-
-//         const otp = generateOTP();
-//         userDoc.user.otp = otp;
-//         userDoc.user.otpExpires = new Date(Date.now() + 5 * 60 * 1000);
-//         userDoc.user.isOtpVerified = false;
-//         await userDoc.save();
-
-//         if (email) {
-//             await sendOTP(email, otp);
-//             res.status(200).json({ message: "New OTP sent to your email", success: true, email });
-//         } else {
-//             res.status(200).json({ message: "New OTP generated for phone verification", success: true, phone, otp });
-//         }
-//     } catch (error) {
-//         console.error("Error in resendOTP:", error);
-//         res.status(500).json({ message: "Internal Server Error", success: false });
-//     }
-// };
-
-
+}
 
 module.exports = {
-    // loginHostFamily,
-    // signUpHostFamilyWithEmail,
     signUpWithEmail,
     verifyEmailOTP,
     resendEmailOTP,
     initiateMobileVerification,
-    verifyMobileOTP
-    // signUpHostFamilyWithPhone,
-    // verifyEmail,
-    // verifyOTP,
-    // resendOTP,
-    // toggleHostFamilyCategory
+    verifyMobileOTP,
+    loginWithEmail
 };

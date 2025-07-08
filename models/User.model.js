@@ -1,233 +1,122 @@
 const mongoose = require('mongoose');
 
-// Common schemas that can be reused
+// Common schemas
 const parentSchema = new mongoose.Schema({
-    firstName: {
-        type: String,
-        required: false
-    },
-    lastName: {
-        type: String,
-        required: false
-    },
-    age: {
-        type: Number,
-        required: false
-    },
-    nationality: {
-        type: String,
-        required: false
-    },
-    occupation: {
-        type: String,
-        required: false
-    },
-    dailyLifestyle: {
-        type: String,
-        required: false
-    },
-    role: {
-        type: String,
-        required: false
-    }
+    role: String,
+    firstName: String,
+    lastName: String,
+    age: Number,
+    nationality: String,
+    occupation: String,
+    dailyLifestyle: String
+}, { _id: false });
+
+const languageSchema = new mongoose.Schema({
+    primaryLanguage: String,
+    secondaryLanguage: String
 }, { _id: false });
 
 const agencySchema = new mongoose.Schema({
-    agency: {
-        type: String,
-        required: false
-    },
-    agencyId: {
-        type: String,
-        required: false
-    },
-    currentStatus: {
-        type: String,
-        required: false
-    },
-    wouldChangeAgency: {
-        type: Boolean,
-        required: false
-    },
-    areYouCurrentlyHosting: {
-        type: String,
-        required: false
-    },
-    whichAgency: {
-        type: String,
-        required: false
-    }
+    name: String,
+    idNumber: String,
+    currentStatus: String,
+    wouldChange: Boolean,
+    preferredAgency: String
 }, { _id: false });
 
-const locationSchema = new mongoose.Schema({
-    zipCode: {
-        type: String,
-        required: false
-    },
-    state: {
-        type: String,
-        required: false
-    },
-    city: {
-        type: String,
-        required: false
-    },
-    infoAboutArea: {
-        type: String,
-        required: false
-    }
+const availabilitySchema = new mongoose.Schema({
+    startDate: Date,
+    durationYears: Number,
+    durationMonths: Number
+}, { _id: false });
+
+const childSchema = new mongoose.Schema({
+    name: String,
+    age: Number,
+    gender: String,
+    daytimeStatus: String,
+    specialNeeds: [String],
+    temperaments: [String],
+    interests: [String],
+    about: { type: String, maxlength: 500 }
+}, { _id: false });
+
+const scheduleActivitySchema = new mongoose.Schema({
+    time: String,
+    activity: String
 }, { _id: false });
 
 const dayScheduleSchema = new mongoose.Schema({
-    time: {
-        type: String,
-        required: false
+    activities: [scheduleActivitySchema]
+}, { _id: false });
+
+const scheduleSchema = new mongoose.Schema({
+    monday: dayScheduleSchema,
+    tuesday: dayScheduleSchema,
+    wednesday: dayScheduleSchema,
+    thursday: dayScheduleSchema,
+    friday: dayScheduleSchema,
+    saturday: dayScheduleSchema,
+    sunday: dayScheduleSchema
+}, { _id: false });
+
+const locationSchema = new mongoose.Schema({
+    zipCode: String,
+    state: String,
+    city: String,
+    aboutArea: { type: String, maxlength: 500 }
+}, { _id: false });
+
+// PairConnect Specific Schema
+const pairConnectSchema = new mongoose.Schema({
+    dietaryPreferences: [String],
+    requiredAuPair: {
+        agency: String,
+        country: String,
+        driving: Boolean,
+        experience: String,
+        language: String
     },
-    activity: {
-        type: String,
-        required: false
+    optionalAuPair: {
+        interests: [String],
+        languages: [String],
+        temperaments: [String]
     }
 }, { _id: false });
 
-const childInfoSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: false
-    },
-    age: {
-        type: Number,
-        required: false
-    },
-    gender: {
-        type: String,
-        required: false
-    },
-    dayStatus: {
-        type: String,
-        required: false
-    },
-    allergy: {
-        type: String,
-        required: false
-    },
-    temperaments: {
-        type: [String],
-        required: false
-    },
-    interests: {
-        type: [String],
-        required: false
-    },
-    aboutYourChild: {
-        type: String,
-        required: false
-    }
+// PairHaven Specific Schema
+const pairHavenSchema = new mongoose.Schema({
+    aboutFamily: { type: String, maxlength: 500 },
+    spaceInHome: { type: String, maxlength: 500 },
+    roomStatus: String
 }, { _id: false });
 
 // Host Family Schema
 const hostFamilySchema = new mongoose.Schema({
-    familyStructure: {
-        type: String,
-        required: false
-    },
-    firstParent: {
-        type: parentSchema,
-        required: false
-    },
-    secondParent: {
-        type: parentSchema,
-        required: false
-    },
-    primaryLanguage: {
-        type: String,
-        required: false
-    },
-    secondaryLanguage: {
-        type: String,
-        required: false
-    },
-    agency: {
-        type: agencySchema,
-        required: false
-    },
-    availabilityDate: {
-        type: Date,
-        required: false
-    },
-    noOfChildren: {
-        type: Number,
-        required: false
-    },
-    children: {
-        type: [childInfoSchema],
-        required: false
-    },
-    religion: {
-        type: String,
-        required: false
-    },
-    pets: {
-        type: [String],
-        required: false
-    },
-    location: {
-        type: locationSchema,
-        required: false
-    },
-    benefits: {
-        type: [String],
-        required: false
-    },
-    aboutYourFamily: {
-        type: String,
-        required: false
-    },
-    spaceInHome: {
-        type: String,
-        required: false
-    },
-    householdAtmosphere: {
-        type: String,
-        required: false
-    },
-    durationYears: {
-        type: Number,
-        required: false
-    },
-    durationMonths: {
-        type: Number,
-        required: false
-    },
-    dietaryPref: {
-        type: String,
-        required: false
-    },
-    schedule: {
-        type: Map,
-        of: [dayScheduleSchema],
-        required: false
-    },
-    images: {
-        type: [String],
-        required: false
-    }
-}, { _id: false, timestamps: true });
-
-// Au Pair Schema (to be implemented later)
-const auPairSchema = new mongoose.Schema({
-    // Will be implemented later as per requirements
+    isPairConnect: { type: Boolean, default: false },
+    isPairHaven: { type: Boolean, default: false },
+    familyStructure: String,
+    firstParent: parentSchema,
+    secondParent: parentSchema,
+    languages: languageSchema,
+    agency: agencySchema,
+    availability: availabilitySchema,
+    numberOfChildren: Number,
+    children: [childSchema],
+    schedule: scheduleSchema,
+    religion: String,
+    pets: [String],
+    location: locationSchema,
+    benefits: [String],
+    householdAtmosphere: String,
+    profilePhoto: String,
+    galleryPhotos: [String],
+    pairConnectData: pairConnectSchema,
+    pairHavenData: pairHavenSchema
 }, { _id: false, timestamps: true });
 
 // Main User Schema
 const userSchema = new mongoose.Schema({
-    firstName: {
-        type: String,
-        required: false
-    },
-    lastName: {
-        type: String,
-        required: false
-    },
     email: {
         type: String,
         required: true,
@@ -239,23 +128,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: false,
         unique: true,
-        trim: true,
-    },
-    age: {
-        type: Number,
-        required: false
-    },
-    credits: {
-        type: Number,
-        required: false
-    },
-    images: {
-        type: [String],
-        required: false
-    },
-    profileImage: {
-        type: String,
-        required: false
+        trim: true
     },
     isHostFamily: {
         type: Boolean,
@@ -267,10 +140,6 @@ const userSchema = new mongoose.Schema({
     },
     hostFamily: {
         type: hostFamilySchema,
-        required: false
-    },
-    auPair: {
-        type: auPairSchema,
         required: false
     },
     otp: {
@@ -303,7 +172,5 @@ const userSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-
 const User = mongoose.model('User', userSchema);
-
 module.exports = User;
