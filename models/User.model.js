@@ -1,121 +1,152 @@
 const mongoose = require('mongoose');
 
-// Common schemas
-const parentSchema = new mongoose.Schema({
-    role: String,
+// =================== BASE SCHEMAS ====================
+const LocationModelSchema = new mongoose.Schema({
+    zipCode: String,
+    state: String,
+    city: String,
+    infoAboutArea: String
+}, { _id: false });
+
+const ParentModelSchema = new mongoose.Schema({
+    age: Number,
     firstName: String,
     lastName: String,
-    age: Number,
     nationality: String,
     occupation: String,
-    dailyLifestyle: String
+    dailyLifestyle: String,
+    role: String
 }, { _id: false });
 
-const languageSchema = new mongoose.Schema({
-    primaryLanguage: String,
-    secondaryLanguage: String
-}, { _id: false });
-
-const agencySchema = new mongoose.Schema({
-    name: String,
-    idNumber: String,
-    currentStatus: String,
-    wouldChange: Boolean,
-    preferredAgency: String
-}, { _id: false });
-
-const availabilitySchema = new mongoose.Schema({
-    startDate: Date,
-    durationYears: Number,
-    durationMonths: Number
-}, { _id: false });
-
-const childSchema = new mongoose.Schema({
-    name: String,
+const ChildModelSchema = new mongoose.Schema({
     age: Number,
+    name: String,
     gender: String,
-    daytimeStatus: String,
-    specialNeeds: [String],
+    dayStatus: String,
+    allergy: String,
+    aboutYourChild: String,
     temperaments: [String],
-    interests: [String],
-    about: { type: String, maxlength: 500 }
+    interests: [String]
 }, { _id: false });
 
-const scheduleActivitySchema = new mongoose.Schema({
+const AgencyModelSchema = new mongoose.Schema({
+    name: String,
+    id: String,
+    currentStatus: String,
+    whichAgency: String,
+    wouldChangeAgency: Boolean,
+    areYouCurrentlyHosting: Boolean
+}, { _id: false });
+
+const DayScheduleSchema = new mongoose.Schema({
     time: String,
     activity: String
 }, { _id: false });
 
-const dayScheduleSchema = new mongoose.Schema({
-    activities: [scheduleActivitySchema]
+const RequiredAuPairModelSchema = new mongoose.Schema({
+    agencyName: String,
+    country: String,
+    abilityToDrive: String,
+    experience: String,
+    language: String,
+    status: String
 }, { _id: false });
 
-const scheduleSchema = new mongoose.Schema({
-    monday: dayScheduleSchema,
-    tuesday: dayScheduleSchema,
-    wednesday: dayScheduleSchema,
-    thursday: dayScheduleSchema,
-    friday: dayScheduleSchema,
-    saturday: dayScheduleSchema,
-    sunday: dayScheduleSchema
-}, { _id: false });
-
-const locationSchema = new mongoose.Schema({
-    zipCode: String,
-    state: String,
-    city: String,
-    aboutArea: { type: String, maxlength: 500 }
-}, { _id: false });
-
-// PairConnect Specific Schema
-const pairConnectSchema = new mongoose.Schema({
-    dietaryPreferences: [String],
-    requiredAuPair: {
-        agency: String,
-        country: String,
-        driving: Boolean,
-        experience: String,
-        language: String
-    },
-    optionalAuPair: {
-        interests: [String],
-        languages: [String],
-        temperaments: [String]
-    }
-}, { _id: false });
-
-// PairHaven Specific Schema
-const pairHavenSchema = new mongoose.Schema({
-    aboutFamily: { type: String, maxlength: 500 },
-    spaceInHome: { type: String, maxlength: 500 },
-    roomStatus: String
-}, { _id: false });
-
-// Host Family Schema
-const hostFamilySchema = new mongoose.Schema({
-    isPairConnect: { type: Boolean, default: false },
-    isPairHaven: { type: Boolean, default: false },
-    familyStructure: String,
-    firstParent: parentSchema,
-    secondParent: parentSchema,
-    languages: languageSchema,
-    agency: agencySchema,
-    availability: availabilitySchema,
-    numberOfChildren: Number,
-    children: [childSchema],
-    schedule: scheduleSchema,
+const OptionalAuPairModelSchema = new mongoose.Schema({
+    interest: String,
+    language: String,
+    pets: String,
     religion: String,
-    pets: [String],
-    location: locationSchema,
-    benefits: [String],
-    householdAtmosphere: String,
-    profilePhoto: String,
-    galleryPhotos: [String],
-    pairConnectData: pairConnectSchema,
-    pairHavenData: pairHavenSchema
-}, { _id: false, timestamps: true });
+    temperament: String
+}, { _id: false });
 
-// Main User Schema
+// ==================== AU PAIR SCHEMA ====================
+const AuPairModelSchema = new mongoose.Schema({
+    // Type Flags
+    isPairConnect: Boolean,
+    isPairHaven: Boolean,
+    isPairLink: Boolean,
+
+    // Basic Info
+    age: Number,
+    firstName: String,
+    lastName: String,
+    nationality: String,
+    areYouFluent: String,
+    availabilityDate: String,
+    durationMonth: String,
+    durationYear: String,
+    religion: String,
+    whichCountryAreYouFrom: String,
+    aboutYourJourney: String,
+    aboutYourself: String,
+    usingPairLinkFor: String,
+
+    // Lists
+    images: [String],
+    languages: [String],
+    pets: [String],
+    expNskills: [String],
+    temperament: [String],
+    thingsILove: [String],
+    whatMakesMeSmile: [String],
+    favSpots: [String],
+
+    // Nested Models
+    agency: AgencyModelSchema,
+    location: LocationModelSchema
+}, { _id: false });
+
+// ==================== HOST FAMILY SCHEMA ====================
+const HostFamilyModelSchema = new mongoose.Schema({
+    // Type Flags
+    isPairConnect: Boolean,
+    isPairHaven: Boolean,
+
+    // Basic Info
+    familyStructure: String,
+    primaryLanguage: String,
+    secondaryLanguage: String,
+    availabilityDate: String,
+    durationYear: String,
+    durationMonth: String,
+    religion: String,
+    aboutYourFamily: String,
+    familyName: String,
+    spaceInHome: String,
+    householdAtmosphere: String,
+    profileImage: String,
+
+    // Lists
+    pets: [String],
+    images: [String],
+    benefits: [String],
+    dietaryPrefs: [String],
+
+    // Children
+    noOfChildren: Number,
+    children: [ChildModelSchema],
+
+    // Schedule (using Map for dynamic day keys)
+    schedule: {
+        type: Map,
+        of: [DayScheduleSchema]
+    },
+
+    // Parents
+    firstParent: ParentModelSchema,
+    secondParent: ParentModelSchema,
+
+    // Nested Models
+    agency: AgencyModelSchema,
+    location: LocationModelSchema,
+
+    // Au Pair Preferences
+    requiredAuPairModel: RequiredAuPairModelSchema,
+    optionalAuPairModel: OptionalAuPairModelSchema
+}, { _id: false });
+
+// ==================== MAIN USER SCHEMA ====================
 const userSchema = new mongoose.Schema({
     email: {
         type: String,
@@ -128,6 +159,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: false,
         unique: true,
+        sparse: true,
         trim: true
     },
     isHostFamily: {
@@ -139,7 +171,11 @@ const userSchema = new mongoose.Schema({
         default: false
     },
     hostFamily: {
-        type: hostFamilySchema,
+        type: HostFamilyModelSchema,
+        required: false
+    },
+    auPair: {
+        type: AuPairModelSchema,
         required: false
     },
     otp: {

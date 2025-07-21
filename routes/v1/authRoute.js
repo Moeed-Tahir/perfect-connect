@@ -7,7 +7,8 @@ router.post("/signup-with-email", authController.signUpWithEmail);
 router.post("/verify-email-otp", authController.verifyEmailOTP);
 router.post("/resend-email-otp", authController.resendEmailOTP);
 router.post("/login-with-email", authController.loginWithEmail);
-router.post("/signup-verify-number", jwtMiddleware, authController.initiateMobileVerification);
-router.post("/verify-mobile-otp", jwtMiddleware, authController.verifyMobileOTP);
+router.post("/signup-with-phone", jwtMiddleware, authController.initiateMobileVerification);
+router.post("/verify-phone-otp", jwtMiddleware, authController.verifyMobileOTP);
+router.get("/me", authController.getCurrentUserData);
 
 module.exports = router;

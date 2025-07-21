@@ -26,6 +26,9 @@ const PORT = process.env.PORT || 3000;
         const hostFamilyRoutes = require('./routes/v1/hostFamilyRoute');
         app.use('/api', hostFamilyRoutes);
 
+        const auPairRoutes = require('./routes/v1/auPairRoute');
+        app.use('/api', auPairRoutes);
+
         app.use((err, req, res, next) => {
             console.error(err.stack);
             res.status(500).json({ error: "Internal Server Error" });
