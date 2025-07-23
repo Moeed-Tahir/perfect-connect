@@ -24,6 +24,7 @@ const ChildModelSchema = new mongoose.Schema({
     gender: String,
     dayStatus: String,
     allergy: String,
+    specialNeeds: String,  // New Added
     aboutYourChild: String,
     temperaments: [String],
     interests: [String]
