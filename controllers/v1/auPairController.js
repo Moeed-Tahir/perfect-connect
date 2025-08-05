@@ -3,6 +3,7 @@ const User = require("../../models/User.model.js");
 const createAuPairProfile = async (req, res) => {
     try {
         const { userId } = req.body;
+
         let {
             // Type flags
             isPairConnect = false,
@@ -22,7 +23,9 @@ const createAuPairProfile = async (req, res) => {
             whichCountryAreYouFrom,
             aboutYourJourney,
             aboutYourself,
+            aboutAuPair,
             usingPairLinkFor,
+            isFluent,
 
             // Lists
             images = [],
@@ -31,30 +34,27 @@ const createAuPairProfile = async (req, res) => {
             expNskills = [],
             temperament = [],
             thingsILove = [],
-            whatMakesMeSmile = [],
             favSpots = [],
+
+            // Object field
+            whatMakesMeSmile = {},
 
             // Nested Models
             agency,
             location
-
         } = req.body;
 
-        // Validate at least one type is selected
         if (!isPairConnect && !isPairHaven && !isPairLink) {
             return res.status(400).json({ message: "At least one au pair type must be selected" });
         }
 
-        // Find user
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Ensure user is marked as au pair
         user.isAuPair = true;
 
-        // Create or update au pair profile
         user.auPair = {
             // Type Flags
             isPairConnect,
@@ -74,7 +74,9 @@ const createAuPairProfile = async (req, res) => {
             whichCountryAreYouFrom,
             aboutYourJourney,
             aboutYourself,
+            aboutAuPair,
             usingPairLinkFor,
+            isFluent,
 
             // Lists
             images: Array.isArray(images) ? images : [],
@@ -83,8 +85,13 @@ const createAuPairProfile = async (req, res) => {
             expNskills: Array.isArray(expNskills) ? expNskills : [],
             temperament: Array.isArray(temperament) ? temperament : [],
             thingsILove: Array.isArray(thingsILove) ? thingsILove : [],
-            whatMakesMeSmile: Array.isArray(whatMakesMeSmile) ? whatMakesMeSmile : [],
             favSpots: Array.isArray(favSpots) ? favSpots : [],
+
+            // Object Field
+            whatMakesMeSmile: {
+                category: whatMakesMeSmile.category || "",
+                description: whatMakesMeSmile.description || ""
+            },
 
             // Nested Models
             agency: agency || {
@@ -99,11 +106,13 @@ const createAuPairProfile = async (req, res) => {
                 zipCode: "",
                 state: "",
                 city: "",
-                infoAboutArea: ""
+                infoAboutArea: "",
+                country: "",
+                nationality: "",
+                hostFamilyExpectedLocation: ""
             }
         };
 
-        // Save the updated user
         await user.save();
 
         return res.status(200).json({

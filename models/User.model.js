@@ -85,6 +85,8 @@ const AuPairModelSchema = new mongoose.Schema({
     aboutYourJourney: String,
     aboutYourself: String,
     usingPairLinkFor: String,
+    isFluent: Boolean,
+    aboutAuPair: String,
 
     // Lists
     images: [String],
@@ -93,7 +95,10 @@ const AuPairModelSchema = new mongoose.Schema({
     expNskills: [String],
     temperament: [String],
     thingsILove: [String],
-    whatMakesMeSmile: [String],
+    whatMakesMeSmile: {
+        category: String,
+        description: String
+    },
     favSpots: [String],
 
     // Nested Models
