@@ -5,7 +5,10 @@ const LocationModelSchema = new mongoose.Schema({
     zipCode: String,
     state: String,
     city: String,
-    infoAboutArea: String
+    infoAboutArea: String,
+    country: String,
+    nationality: String,
+    hostFamilyExpectedLocation: String
 }, { _id: false });
 
 const ParentModelSchema = new mongoose.Schema({

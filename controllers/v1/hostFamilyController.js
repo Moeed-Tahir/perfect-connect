@@ -52,7 +52,7 @@ const createHostFamily = async (req, res) => {
     }
 
     // Validate children count matches
-    if (noOfChildren !== children.length) {
+    if (isPairConnect &&  !isPairHaven &&(noOfChildren !== children.length)) {
       return res.status(400).json({
         success: false,
         message: "Number of children does not match children array length"
