@@ -155,7 +155,7 @@ const getAllAuPair = async (req, res) => {
       .skip((page - 1) * length)
       .limit(length);
 
-    return res.status(200).json({ success: true, data: results });
+    return res.status(200).json({ success: true, data: results,page,length });
   } catch (error) {
     console.error('Error in getAllAuPair:', error);
     return res.status(500).json({ success: false, message: 'Server Error', error: error.message });

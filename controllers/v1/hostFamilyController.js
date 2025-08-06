@@ -23,7 +23,7 @@ const createHostFamily = async (req, res) => {
       images = [],
       benefits = [],
       dietaryPrefs = [],
-      noOfChildren,
+      noOfChildren = 0,
       children = [],
       schedule = {},
       firstParent,
@@ -34,7 +34,6 @@ const createHostFamily = async (req, res) => {
       optionalAuPairModel
     } = req.body;
 
-    // Validate userId
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({
         success: false,
@@ -42,7 +41,6 @@ const createHostFamily = async (req, res) => {
       });
     }
 
-    // Validate program selection
     if (!isPairConnect && !isPairHaven) {
       return res.status(400).json({
         success: false,
@@ -51,15 +49,13 @@ const createHostFamily = async (req, res) => {
       });
     }
 
-    // Validate children count matches
-    if (isPairConnect &&  !isPairHaven &&(noOfChildren !== children.length)) {
+    if (isPairConnect && !isPairHaven && noOfChildren !== children.length) {
       return res.status(400).json({
         success: false,
         message: "Number of children does not match children array length"
       });
     }
 
-    // Prepare update data
     const updateData = {
       isHostFamily: true,
       hostFamily: {
@@ -77,13 +73,13 @@ const createHostFamily = async (req, res) => {
         spaceInHome,
         householdAtmosphere,
         profileImage,
-        pets: Array.isArray(pets) ? pets : [],
-        images: Array.isArray(images) ? images : [],
-        benefits: Array.isArray(benefits) ? benefits : [],
-        dietaryPrefs: Array.isArray(dietaryPrefs) ? dietaryPrefs : [],
+        pets,
+        images,
+        benefits,
+        dietaryPrefs,
         noOfChildren,
-        children: Array.isArray(children) ? children : [],
-        schedule: typeof schedule === 'object' ? schedule : {},
+        children,
+        schedule,
         firstParent: firstParent || {
           age: 0,
           firstName: "",
@@ -114,7 +110,10 @@ const createHostFamily = async (req, res) => {
           zipCode: "",
           state: "",
           city: "",
-          infoAboutArea: ""
+          infoAboutArea: "",
+          country: "",
+          nationality: "",
+          hostFamilyExpectedLocation: ""
         },
         requiredAuPairModel: requiredAuPairModel || {
           agencyName: "",
@@ -122,7 +121,7 @@ const createHostFamily = async (req, res) => {
           abilityToDrive: "",
           experience: "",
           language: "",
-          status: ""  
+          status: ""
         },
         optionalAuPairModel: optionalAuPairModel || {
           interest: "",
@@ -134,14 +133,13 @@ const createHostFamily = async (req, res) => {
       }
     };
 
-    // Find and update user
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $set: updateData },
       {
         new: true,
         runValidators: true,
-        select: '-password -otp -mobileOtp -__v' // Exclude sensitive fields
+        select: '-password -otp -mobileOtp -__v'
       }
     );
 
@@ -153,34 +151,15 @@ const createHostFamily = async (req, res) => {
       });
     }
 
-    // Convert to plain object and clean up
-    const userResponse = updatedUser.toObject();
-    delete userResponse.createdAt;
-    delete userResponse.updatedAt;
-
     return res.status(200).json({
       message: "Host family profile created successfully",
       data: {
-        user: userResponse
+        user: updatedUser
       }
     });
 
   } catch (error) {
     console.error("Error creating host family profile:", error);
-
-    if (error.name === "ValidationError") {
-      const errors = Object.values(error.errors).reduce((acc, err) => {
-        acc[err.path] = err.message;
-        return acc;
-      }, {});
-
-      return res.status(400).json({
-        success: false,
-        code: "VALIDATION_ERROR",
-        message: "Validation failed",
-        errors
-      });
-    }
 
     return res.status(500).json({
       success: false,
@@ -191,15 +170,19 @@ const createHostFamily = async (req, res) => {
   }
 };
 
+
 const getAllHostFamily = async (req, res) => {
   try {
     const { type, userId, page = 1, length = 10 } = req.body;
 
     if (!type) {
-      return res.status(400).json({ success: false, message: 'Type is required' });
+      return res.status(400).json({
+        success: false,
+        message: 'Type is required'
+      });
     }
 
-    let results;
+    let results = [];
 
     if (type === 'pairConnect') {
       results = await User.find({
@@ -207,29 +190,54 @@ const getAllHostFamily = async (req, res) => {
         'hostFamily.isPairConnect': true
       })
         .skip((page - 1) * length)
-        .limit(length);
+        .limit(length)
+        .lean();
     } else if (type === 'pairHaven') {
       if (!userId) {
-        return res.status(400).json({ success: false, message: 'User ID is required for pairHaven' });
+        return res.status(400).json({
+          success: false,
+          message: 'User ID is required for pairHaven'
+        });
       }
 
-      const user = await User.findById(userId);
+      const user = await User.findOne({
+        _id: userId,
+        isHostFamily: true,
+        'hostFamily.isPairHaven': true
+      }).lean();
 
-      if (!user || !user.hostFamily || !user.hostFamily.isPairHaven) {
-        return res.status(404).json({ success: false, message: 'Host family not found or not marked as pairHaven' });
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'Host family not found or not marked as pairHaven'
+        });
       }
 
-      results = [user]; // No pagination needed for single user
+      results = [user];
     } else {
-      return res.status(400).json({ success: false, message: 'Invalid type value' });
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid type value'
+      });
     }
 
-    return res.status(200).json({ success: true, data: results });
+    return res.status(200).json({
+      success: true,
+      data: results,
+      page,
+      length
+    });
+
   } catch (error) {
     console.error('Error in getAllHostFamily:', error);
-    return res.status(500).json({ success: false, message: 'Server Error', error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
   }
 };
 
 
-module.exports = { createHostFamily , getAllHostFamily };
+
+module.exports = { createHostFamily, getAllHostFamily };
