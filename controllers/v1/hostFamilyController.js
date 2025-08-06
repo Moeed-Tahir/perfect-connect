@@ -170,7 +170,6 @@ const createHostFamily = async (req, res) => {
   }
 };
 
-
 const getAllHostFamily = async (req, res) => {
   try {
     const { type, userId, page = 1, length = 10 } = req.body;
@@ -238,6 +237,129 @@ const getAllHostFamily = async (req, res) => {
   }
 };
 
+const pauseHostFamily = async (req, res) => {
+    try {
+        const { userId, type } = req.body;
+        console.log("type", type);
+        
+        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid user ID'
+            });
+        }
 
+        if (!type || !['pairConnect', 'pairHaven'].includes(type)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid type. Must be either "pairConnect" or "pairHaven"'
+            });
+        }
 
-module.exports = { createHostFamily, getAllHostFamily };
+        const user = await User.findOne({
+            _id: userId,
+            isHostFamily: true
+        });
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Host family not found'
+            });
+        }
+
+        const typeField = `is${type.charAt(0).toUpperCase() + type.slice(1)}`;
+        if (!user.hostFamily || user.hostFamily[typeField] !== true) {
+            return res.status(400).json({
+                success: false,
+                message: `This host family is not registered as ${type}`
+            });
+        }
+
+        // Set pause status specific to the type
+        user.hostFamily[`${type}Paused`] = true;
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: `Host family ${type} paused successfully`,
+            data: {
+                userId: user._id,
+                type,
+                isPaused: true
+            }
+        });
+
+    } catch (error) {
+        console.error('Error in pauseHostFamily:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server Error',
+            error: error.message
+        });
+    }
+};
+
+const unpauseHostFamily = async (req, res) => {
+    try {
+        const { userId, type } = req.body;
+
+        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid user ID'
+            });
+        }
+
+        if (!type || !['pairConnect', 'pairHaven'].includes(type)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid type. Must be either "pairConnect" or "pairHaven"'
+            });
+        }
+
+        const user = await User.findOne({
+            _id: userId,
+            isHostFamily: true
+        });
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Host family not found'
+            });
+        }
+
+        const typeField = `isPair${type.charAt(0).toUpperCase() + type.slice(1)}`;
+        if (!user.hostFamily || !user.hostFamily[typeField]) {
+            return res.status(400).json({
+                success: false,
+                message: `This host family is not registered as ${type}`
+            });
+        }
+
+        // Set pause status specific to the type
+        user.hostFamily[`${type}Paused`] = false;
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: `Host family ${type} unpaused successfully`,
+            data: {
+                userId: user._id,
+                type,
+                isPaused: false
+            }
+        });
+
+    } catch (error) {
+        console.error('Error in unpauseHostFamily:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server Error',
+            error: error.message
+        });
+    }
+};
+
+module.exports = { createHostFamily, getAllHostFamily,pauseHostFamily,unpauseHostFamily };

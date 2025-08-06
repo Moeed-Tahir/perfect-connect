@@ -162,6 +162,8 @@ const getAllAuPair = async (req, res) => {
   }
 };
 
+
+
 module.exports = {
     createAuPairProfile,
     getAllAuPair

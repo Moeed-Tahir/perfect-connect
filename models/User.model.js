@@ -111,7 +111,7 @@ const HostFamilyModelSchema = new mongoose.Schema({
     // Type Flags
     isPairConnect: Boolean,
     isPairHaven: Boolean,
-
+    isPaused: Boolean,
     // Basic Info
     familyStructure: String,
     primaryLanguage: String,

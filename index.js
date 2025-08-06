@@ -23,6 +23,9 @@ const PORT = process.env.PORT || 3000;
         const authRoutes = require('./routes/v1/authRoute');
         app.use('/api/auth', authRoutes);
 
+        const reportUserRoutes = require('./routes/v1/reportUserRoute');
+        app.use('/api', reportUserRoutes);
+
         const hostFamilyRoutes = require('./routes/v1/hostFamilyRoute');
         app.use('/api', hostFamilyRoutes);
 

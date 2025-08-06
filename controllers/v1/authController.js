@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require("../../models/User.model.js");
+const mongoose = require('mongoose');
 const secret_Key = process.env.SECRET_KEY;
 const { generateOTP, sendOTP, sendOTPViaMessage } = require('../../services/otpService.js');
 const { generateAuthToken } = require('../../services/authToken.js');
@@ -415,7 +416,7 @@ const getCurrentUserData = async (req, res) => {
                 user.mobileOtp = undefined;
                 user.otpExpires = undefined;
                 user.mobileOtpExpires = undefined;
-                user.isOtpVerified = undefined; 
+                user.isOtpVerified = undefined;
 
                 return res.status(200).json({
                     message: 'User data retrieved successfully',
@@ -441,6 +442,36 @@ const getCurrentUserData = async (req, res) => {
     }
 };
 
+const deleteUser = async (req, res) => {
+    try {
+        const { userId } = req.body;
+
+        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID' });
+        }
+
+        const deletedUser = await User.findByIdAndDelete(userId);
+
+        if (!deletedUser) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'User deleted successfully',
+            deletedUser
+        });
+
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+}
+
 module.exports = {
     signUpWithEmail,
     verifyEmailOTP,
@@ -448,5 +479,6 @@ module.exports = {
     initiateMobileVerification,
     verifyMobileOTP,
     loginWithEmail,
-    getCurrentUserData
+    getCurrentUserData,
+    deleteUser,
 };
