@@ -191,4 +191,45 @@ const createHostFamily = async (req, res) => {
   }
 };
 
-module.exports = { createHostFamily };
+const getAllHostFamily = async (req, res) => {
+  try {
+    const { type, userId, page = 1, length = 10 } = req.body;
+
+    if (!type) {
+      return res.status(400).json({ success: false, message: 'Type is required' });
+    }
+
+    let results;
+
+    if (type === 'pairConnect') {
+      results = await User.find({
+        isHostFamily: true,
+        'hostFamily.isPairConnect': true
+      })
+        .skip((page - 1) * length)
+        .limit(length);
+    } else if (type === 'pairHaven') {
+      if (!userId) {
+        return res.status(400).json({ success: false, message: 'User ID is required for pairHaven' });
+      }
+
+      const user = await User.findById(userId);
+
+      if (!user || !user.hostFamily || !user.hostFamily.isPairHaven) {
+        return res.status(404).json({ success: false, message: 'Host family not found or not marked as pairHaven' });
+      }
+
+      results = [user]; // No pagination needed for single user
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid type value' });
+    }
+
+    return res.status(200).json({ success: true, data: results });
+  } catch (error) {
+    console.error('Error in getAllHostFamily:', error);
+    return res.status(500).json({ success: false, message: 'Server Error', error: error.message });
+  }
+};
+
+
+module.exports = { createHostFamily , getAllHostFamily };

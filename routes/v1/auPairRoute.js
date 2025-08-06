@@ -4,5 +4,6 @@ const jwtMiddleware = require('../../middlewares/authMiddleware');
 const router = express.Router();
 
 router.post("/create-au-pair-profile", jwtMiddleware, auPairController.createAuPairProfile);
+router.post("/getAllAuPair", jwtMiddleware, auPairController.getAllAuPair);
 
 module.exports = router;

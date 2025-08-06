@@ -4,9 +4,9 @@ const jwtMiddleware = require('../../middlewares/authMiddleware');
 const router = express.Router();
 
 router.post("/create-host-family-profile", jwtMiddleware, hostFamilyController.createHostFamily);
+router.post("/getAllHostFamily", jwtMiddleware, hostFamilyController.getAllHostFamily);
 
 module.exports = router;
-
 
 // if email not varified, send OTP to email
 // if mobile not varified, send OTP to mobile

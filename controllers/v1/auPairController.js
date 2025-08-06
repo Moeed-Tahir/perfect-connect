@@ -131,6 +131,38 @@ const createAuPairProfile = async (req, res) => {
     }
 };
 
+const getAllAuPair = async (req, res) => {
+  try {
+    const { type, page = 1, length = 10 } = req.body;
+
+    if (!type) {
+      return res.status(400).json({ success: false, message: 'Type is required' });
+    }
+
+    let query = { isAuPair: true };
+
+    if (type === 'pairConnect') {
+      query['auPair.isPairConnect'] = true;
+    } else if (type === 'pairHaven') {
+      query['auPair.isPairHaven'] = true;
+    } else if (type === 'pairLink') {
+      query['auPair.isPairLink'] = true;
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid type value' });
+    }
+
+    const results = await User.find(query)
+      .skip((page - 1) * length)
+      .limit(length);
+
+    return res.status(200).json({ success: true, data: results });
+  } catch (error) {
+    console.error('Error in getAllAuPair:', error);
+    return res.status(500).json({ success: false, message: 'Server Error', error: error.message });
+  }
+};
+
 module.exports = {
-    createAuPairProfile
+    createAuPairProfile,
+    getAllAuPair
 };
