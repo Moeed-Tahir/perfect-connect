@@ -87,6 +87,7 @@ const AuPairModelSchema = new mongoose.Schema({
     usingPairLinkFor: String,
     isFluent: Boolean,
     aboutAuPair: String,
+    profileImage: String,
 
     // Lists
     images: [String],
