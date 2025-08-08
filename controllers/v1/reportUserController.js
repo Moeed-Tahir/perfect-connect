@@ -34,6 +34,19 @@ const reportUser = async (req, res) => {
             });
         }
 
+        const existingReport = await ReportUser.findOne({
+            reporterId,
+            reportedUserId,
+            status: { $ne: 'dismissed' }
+        });
+
+        if (existingReport) {
+            return res.status(400).json({
+                success: false,
+                message: 'You have already reported this user'
+            });
+        }
+
         const [reporter, reportedUser] = await Promise.all([
             User.findById(reporterId),
             User.findById(reportedUserId)

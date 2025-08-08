@@ -184,14 +184,20 @@ const getAllHostFamily = async (req, res) => {
     let results = [];
 
     if (type === 'pairConnect') {
-      results = await User.find({
-        isHostFamily: true,
-        'hostFamily.isPairConnect': true
-      })
-        .skip((page - 1) * length)
-        .limit(length)
-        .lean();
-    } else if (type === 'pairHaven') {
+      // Using aggregation pipeline for random sampling
+      results = await User.aggregate([
+        { 
+          $match: { 
+            isHostFamily: true,
+            'hostFamily.isPairConnect': true 
+          } 
+        },
+        { $sample: { size: length * 5 } }, // Get larger sample for pagination
+        { $skip: (page - 1) * length },
+        { $limit: length }
+      ]);
+    } 
+    else if (type === 'pairHaven') {
       if (!userId) {
         return res.status(400).json({
           success: false,
@@ -213,7 +219,8 @@ const getAllHostFamily = async (req, res) => {
       }
 
       results = [user];
-    } else {
+    } 
+    else {
       return res.status(400).json({
         success: false,
         message: 'Invalid type value'
