@@ -26,6 +26,7 @@ const createAuPairProfile = async (req, res) => {
             aboutAuPair,
             usingPairLinkFor,
             isFluent,
+            profileImage,
 
             // Lists
             images = [],
@@ -77,6 +78,7 @@ const createAuPairProfile = async (req, res) => {
             aboutAuPair,
             usingPairLinkFor,
             isFluent,
+            profileImage,
 
             // Lists
             images: Array.isArray(images) ? images : [],
