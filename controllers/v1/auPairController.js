@@ -24,7 +24,6 @@ const createAuPairProfile = async (req, res) => {
             aboutYourJourney,
             aboutYourself,
             aboutAuPair,
-            usingPairLinkFor,
             isFluent,
             profileImage,
 
@@ -36,6 +35,7 @@ const createAuPairProfile = async (req, res) => {
             temperament = [],
             thingsILove = [],
             favSpots = [],
+            usingPairLinkFor = [],
 
             // Object field
             whatMakesMeSmile = {},
@@ -76,7 +76,6 @@ const createAuPairProfile = async (req, res) => {
             aboutYourJourney,
             aboutYourself,
             aboutAuPair,
-            usingPairLinkFor,
             isFluent,
             profileImage,
 
@@ -88,6 +87,7 @@ const createAuPairProfile = async (req, res) => {
             temperament: Array.isArray(temperament) ? temperament : [],
             thingsILove: Array.isArray(thingsILove) ? thingsILove : [],
             favSpots: Array.isArray(favSpots) ? favSpots : [],
+            usingPairLinkFor: Array.isArray(usingPairLinkFor) ? usingPairLinkFor : [],
 
             // Object Field
             whatMakesMeSmile: {
