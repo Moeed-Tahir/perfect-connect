@@ -1,6 +1,8 @@
 const AWS = require('aws-sdk');
 const User = require("../../models/User.model.js");
 const mongoose = require("mongoose");
+const { v4: uuidv4 } = require('uuid');
+const ObjectId = mongoose.Types.ObjectId;
 
 const s3 = new AWS.S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -13,12 +15,9 @@ const createAuPairProfile = async (req, res) => {
     const { userId } = req.body;
 
     let {
-      // Type flags
       isPairConnect = false,
       isPairHaven = false,
       isPairLink = false,
-
-      // Basic Info
       firstName,
       lastName,
       age,
@@ -34,9 +33,7 @@ const createAuPairProfile = async (req, res) => {
       aboutAuPair,
       usingPairLinkFor,
       isFluent,
-      profileImage,
-
-      // Lists
+      profileImage, 
       images = [],
       languages = [],
       pets = [],
@@ -44,11 +41,7 @@ const createAuPairProfile = async (req, res) => {
       temperament = [],
       thingsILove = [],
       favSpots = [],
-
-      // Object field
       whatMakesMeSmile = {},
-
-      // Nested Models
       agency,
       location
     } = req.body;
@@ -57,20 +50,59 @@ const createAuPairProfile = async (req, res) => {
       return res.status(400).json({ message: "At least one au pair type must be selected" });
     }
 
+    if (!ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid userId format" });
+    }
     const user = await User.findById(userId);
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    user.isAuPair = true;
+    if (req.files && req.files.profileImage) {
+      const file = req.files.profileImage;
+      const fileExtension = file.name.split('.').pop();
+      const randomKey = `${uuidv4()}.${fileExtension}`;
 
+      const params = {
+        Bucket: "perfect-connect",
+        Key: randomKey,
+        Body: file.data,
+        ContentType: file.mimetype
+      };
+
+      const uploadResult = await s3.upload(params).promise();
+      profileImage = uploadResult.Location;
+    }
+
+    if (req.files && req.files.images) {
+      const uploadedImages = [];
+
+      const imagesArray = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
+
+      for (const img of imagesArray) {
+        const fileExtension = img.name.split('.').pop();
+        const randomKey = `${uuidv4()}.${fileExtension}`;
+
+        const params = {
+          Bucket: "perfect-connect",
+          Key: randomKey,
+          Body: img.data,
+          ContentType: img.mimetype
+        };
+
+        const uploadResult = await s3.upload(params).promise();
+        uploadedImages.push(uploadResult.Location);
+      }
+
+      images = uploadedImages;
+    }
+
+    user.isAuPair = true;
     user.auPair = {
-      // Type Flags
       isPairConnect,
       isPairHaven,
       isPairLink,
-
-      // Basic Info
       age,
       firstName,
       lastName,
@@ -87,23 +119,17 @@ const createAuPairProfile = async (req, res) => {
       usingPairLinkFor,
       isFluent,
       profileImage,
-
-      // Lists
-      images: Array.isArray(images) ? images : [],
+      images,
       languages: Array.isArray(languages) ? languages : [],
       pets: Array.isArray(pets) ? pets : [],
       expNskills: Array.isArray(expNskills) ? expNskills : [],
       temperament: Array.isArray(temperament) ? temperament : [],
       thingsILove: Array.isArray(thingsILove) ? thingsILove : [],
       favSpots: Array.isArray(favSpots) ? favSpots : [],
-
-      // Object Field
       whatMakesMeSmile: {
         category: whatMakesMeSmile.category || "",
         description: whatMakesMeSmile.description || ""
       },
-
-      // Nested Models
       agency: agency || {
         name: "",
         id: "",
@@ -127,9 +153,7 @@ const createAuPairProfile = async (req, res) => {
 
     return res.status(200).json({
       message: "Au Pair profile created/updated successfully",
-      data: {
-        user: user.toObject()
-      }
+      data: { user: user.toObject() }
     });
 
   } catch (error) {
@@ -187,12 +211,14 @@ const uploadTestImageToS3 = async (req, res) => {
       });
     }
 
-
     const testImage = req.files.TestImage;
+
+    const fileExtension = testImage.name.split('.').pop();
+    const randomKey = `${uuidv4()}.${fileExtension}`;
 
     const params = {
       Bucket: "perfect-connect",
-      Key: 'TestImage',
+      Key: randomKey,
       Body: testImage.data,
       ContentType: testImage.mimetype
     };
@@ -206,9 +232,8 @@ const uploadTestImageToS3 = async (req, res) => {
         location: uploadResult.Location,
         key: uploadResult.Key,
         bucket: uploadResult.Bucket,
-        // You might also want to include:
-        // size: testImage.size,
-        // mimetype: testImage.mimetype
+        size: testImage.size,
+        mimetype: testImage.mimetype
       }
     });
   } catch (error) {
@@ -217,7 +242,6 @@ const uploadTestImageToS3 = async (req, res) => {
       success: false,
       message: 'Error uploading TestImage to S3',
       error: error.message
-      // In production, you might not want to send the full error message
     });
   }
 };

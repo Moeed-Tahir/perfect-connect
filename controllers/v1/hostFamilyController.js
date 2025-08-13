@@ -1,5 +1,13 @@
 const mongoose = require("mongoose");
 const User = require("../../models/User.model.js");
+const { v4: uuidv4 } = require('uuid');
+const AWS = require('aws-sdk');
+
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: 'us-east-2'
+});
 
 const createHostFamily = async (req, res) => {
   try {
@@ -54,6 +62,46 @@ const createHostFamily = async (req, res) => {
         success: false,
         message: "Number of children does not match children array length"
       });
+    }
+
+    if (req.files && req.files.profileImage) {
+      const file = req.files.profileImage;
+      const fileExtension = file.name.split(".").pop();
+      const randomKey = `${uuidv4()}.${fileExtension}`;
+
+      const params = {
+        Bucket: "perfect-connect",
+        Key: randomKey,
+        Body: file.data,
+        ContentType: file.mimetype,
+      };
+
+      const uploadResult = await s3.upload(params).promise();
+      profileImage = uploadResult.Location;
+    }
+
+    if (req.files && req.files.images) {
+      const uploadedImages = [];
+      const imagesArray = Array.isArray(req.files.images)
+        ? req.files.images
+        : [req.files.images];
+
+      for (const img of imagesArray) {
+        const fileExtension = img.name.split(".").pop();
+        const randomKey = `${uuidv4()}.${fileExtension}`;
+
+        const params = {
+          Bucket: "perfect-connect",
+          Key: randomKey,
+          Body: img.data,
+          ContentType: img.mimetype,
+        };
+
+        const uploadResult = await s3.upload(params).promise();
+        uploadedImages.push(uploadResult.Location);
+      }
+
+      images = uploadedImages;
     }
 
     const updateData = {
