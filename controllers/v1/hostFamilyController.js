@@ -184,7 +184,6 @@ const getAllHostFamily = async (req, res) => {
     let results = [];
 
     if (type === 'pairConnect') {
-      // Using aggregation pipeline for random sampling
       results = await User.aggregate([
         { 
           $match: { 
@@ -192,7 +191,7 @@ const getAllHostFamily = async (req, res) => {
             'hostFamily.isPairConnect': true 
           } 
         },
-        { $sample: { size: length * 5 } }, // Get larger sample for pagination
+        { $sample: { size: length * 5 } }, 
         { $skip: (page - 1) * length },
         { $limit: length }
       ]);

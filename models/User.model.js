@@ -70,6 +70,7 @@ const AuPairModelSchema = new mongoose.Schema({
     isPairConnect: Boolean,
     isPairHaven: Boolean,
     isPairLink: Boolean,
+    isPaused: Boolean,
 
     // Basic Info
     age: Number,
@@ -84,7 +85,7 @@ const AuPairModelSchema = new mongoose.Schema({
     whichCountryAreYouFrom: String,
     aboutYourJourney: String,
     aboutYourself: String,
-    usingPairLinkFor: String,
+    usingPairLinkFor: [String],
     isFluent: Boolean,
     aboutAuPair: String,
     profileImage: String,

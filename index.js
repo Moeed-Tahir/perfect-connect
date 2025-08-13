@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const { connectDB } = require('./config/connectDB');
+const fileUpload = require('express-fileupload');
 
 dotenv.config();
 
@@ -11,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 (async () => {
     try {
         await connectDB();
-
+        app.use(fileUpload());
         app.use(cors());
         app.use(express.json());
         // app.use('/uploads', express.static('uploads'));
@@ -22,6 +23,15 @@ const PORT = process.env.PORT || 3000;
 
         const authRoutes = require('./routes/v1/authRoute');
         app.use('/api/auth', authRoutes);
+
+        const likeUserRoutes = require('./routes/v1/likeUserRoute');
+        app.use('/api', likeUserRoutes);
+
+        const feedbackUserRoutes = require('./routes/v1/feedbackUserRoute');
+        app.use('/api', feedbackUserRoutes);
+
+        const connectionUserRoute = require('./routes/v1/connectionUserRoute');
+        app.use('/api', connectionUserRoute);
 
         const reportUserRoutes = require('./routes/v1/reportUserRoute');
         app.use('/api', reportUserRoutes);
