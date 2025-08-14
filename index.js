@@ -3,11 +3,23 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { connectDB } = require('./config/connectDB');
 const fileUpload = require('express-fileupload');
-
+const socketIo = require('socket.io');
+const http = require('http');
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const server = http.createServer(app);
+
+const io = socketIo(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
+
+require('./sockets/chatSockets')(io);
 
 (async () => {
     try {
@@ -15,7 +27,6 @@ const PORT = process.env.PORT || 3000;
         app.use(fileUpload());
         app.use(cors());
         app.use(express.json());
-        // app.use('/uploads', express.static('uploads'));
 
         app.get('/', (req, res) => {
             res.send('Welcome back to Perfect Host API!');
@@ -42,13 +53,15 @@ const PORT = process.env.PORT || 3000;
         const auPairRoutes = require('./routes/v1/auPairRoute');
         app.use('/api', auPairRoutes);
 
+        const chatRoutes = require('./routes/v1/chatRoutes');
+        app.use('/api/chat', chatRoutes);
+
         app.use((err, req, res, next) => {
             console.error(err.stack);
             res.status(500).json({ error: "Internal Server Error" });
         });
 
-        // Start server
-        app.listen(PORT, () => {
+        server.listen(PORT, () => {
             console.log(`
       =============================================
        Server successfully started!
