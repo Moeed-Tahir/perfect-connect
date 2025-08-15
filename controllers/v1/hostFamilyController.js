@@ -11,7 +11,7 @@ const s3 = new AWS.S3({
 
 const createHostFamily = async (req, res) => {
   try {
-    const {
+    let {
       userId,
       isPairConnect,
       isPairHaven,
@@ -26,7 +26,7 @@ const createHostFamily = async (req, res) => {
       aboutYourFamily,
       spaceInHome,
       householdAtmosphere,
-      profileImage,
+      profileImage = "",
       pets = [],
       images = [],
       benefits = [],
@@ -41,6 +41,7 @@ const createHostFamily = async (req, res) => {
       requiredAuPairModel,
       optionalAuPairModel
     } = req.body;
+
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({
@@ -64,7 +65,7 @@ const createHostFamily = async (req, res) => {
       });
     }
 
-    if (req.files && req.files.profileImage) {
+    if (req.files?.profileImage) {
       const file = req.files.profileImage;
       const fileExtension = file.name.split(".").pop();
       const randomKey = `${uuidv4()}.${fileExtension}`;
@@ -80,7 +81,7 @@ const createHostFamily = async (req, res) => {
       profileImage = uploadResult.Location;
     }
 
-    if (req.files && req.files.images) {
+    if (req.files?.images) {
       const uploadedImages = [];
       const imagesArray = Array.isArray(req.files.images)
         ? req.files.images
@@ -103,6 +104,7 @@ const createHostFamily = async (req, res) => {
 
       images = uploadedImages;
     }
+
 
     const updateData = {
       isHostFamily: true,
@@ -233,17 +235,17 @@ const getAllHostFamily = async (req, res) => {
 
     if (type === 'pairConnect') {
       results = await User.aggregate([
-        { 
-          $match: { 
+        {
+          $match: {
             isHostFamily: true,
-            'hostFamily.isPairConnect': true 
-          } 
+            'hostFamily.isPairConnect': true
+          }
         },
-        { $sample: { size: length * 5 } }, 
+        { $sample: { size: length * 5 } },
         { $skip: (page - 1) * length },
         { $limit: length }
       ]);
-    } 
+    }
     else if (type === 'pairHaven') {
       if (!userId) {
         return res.status(400).json({
@@ -292,128 +294,128 @@ const getAllHostFamily = async (req, res) => {
 };
 
 const pauseHostFamily = async (req, res) => {
-    try {
-        const { userId, type } = req.body;
-        console.log("type", type);
-        
-        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid user ID'
-            });
-        }
+  try {
+    const { userId, type } = req.body;
+    console.log("type", type);
 
-        if (!type || !['pairConnect', 'pairHaven'].includes(type)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid type. Must be either "pairConnect" or "pairHaven"'
-            });
-        }
-
-        const user = await User.findOne({
-            _id: userId,
-            isHostFamily: true
-        });
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'Host family not found'
-            });
-        }
-
-        const typeField = `is${type.charAt(0).toUpperCase() + type.slice(1)}`;
-        if (!user.hostFamily || user.hostFamily[typeField] !== true) {
-            return res.status(400).json({
-                success: false,
-                message: `This host family is not registered as ${type}`
-            });
-        }
-
-        const pauseField = `${typeField}Paused`;
-        user.hostFamily[pauseField] = true;
-        await user.save();
-
-        return res.status(200).json({
-            success: true,
-            message: `Host family ${type} paused successfully`,
-            data: {
-                userId: user._id,
-                type,
-                [pauseField]: true
-            }
-        });
-
-    } catch (error) {
-        console.error('Error in pauseHostFamily:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Server Error',
-            error: error.message
-        });
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID'
+      });
     }
+
+    if (!type || !['pairConnect', 'pairHaven'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid type. Must be either "pairConnect" or "pairHaven"'
+      });
+    }
+
+    const user = await User.findOne({
+      _id: userId,
+      isHostFamily: true
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Host family not found'
+      });
+    }
+
+    const typeField = `is${type.charAt(0).toUpperCase() + type.slice(1)}`;
+    if (!user.hostFamily || user.hostFamily[typeField] !== true) {
+      return res.status(400).json({
+        success: false,
+        message: `This host family is not registered as ${type}`
+      });
+    }
+
+    const pauseField = `${typeField}Paused`;
+    user.hostFamily[pauseField] = true;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Host family ${type} paused successfully`,
+      data: {
+        userId: user._id,
+        type,
+        [pauseField]: true
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in pauseHostFamily:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
 };
 
 const unpauseHostFamily = async (req, res) => {
-    try {
-        const { userId, type } = req.body;
+  try {
+    const { userId, type } = req.body;
 
-        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid user ID'
-            });
-        }
-
-        if (!type || !['pairConnect', 'pairHaven'].includes(type)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid type. Must be either "pairConnect" or "pairHaven"'
-            });
-        }
-
-        const user = await User.findOne({
-            _id: userId,
-            isHostFamily: true
-        });
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'Host family not found'
-            });
-        }
-
-        const typeField = `is${type.charAt(0).toUpperCase() + type.slice(1)}`;
-        if (!user.hostFamily || !user.hostFamily[typeField]) {
-            return res.status(400).json({
-                success: false,
-                message: `This host family is not registered as ${type}`
-            });
-        }
-
-        const pauseField = `${typeField}Paused`;
-        user.hostFamily[pauseField] = false;
-        await user.save();
-
-        return res.status(200).json({
-            success: true,
-            message: `Host family ${type} unpaused successfully`,
-            data: {
-                userId: user._id,
-                type,
-                [pauseField]: false
-            }
-        });
-
-    } catch (error) {
-        console.error('Error in unpauseHostFamily:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Server Error',
-            error: error.message
-        });
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID'
+      });
     }
+
+    if (!type || !['pairConnect', 'pairHaven'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid type. Must be either "pairConnect" or "pairHaven"'
+      });
+    }
+
+    const user = await User.findOne({
+      _id: userId,
+      isHostFamily: true
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Host family not found'
+      });
+    }
+
+    const typeField = `is${type.charAt(0).toUpperCase() + type.slice(1)}`;
+    if (!user.hostFamily || !user.hostFamily[typeField]) {
+      return res.status(400).json({
+        success: false,
+        message: `This host family is not registered as ${type}`
+      });
+    }
+
+    const pauseField = `${typeField}Paused`;
+    user.hostFamily[pauseField] = false;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Host family ${type} unpaused successfully`,
+      data: {
+        userId: user._id,
+        type,
+        [pauseField]: false
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in unpauseHostFamily:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
 };
 
-module.exports = { createHostFamily, getAllHostFamily,pauseHostFamily,unpauseHostFamily };
+module.exports = { createHostFamily, getAllHostFamily, pauseHostFamily, unpauseHostFamily };
