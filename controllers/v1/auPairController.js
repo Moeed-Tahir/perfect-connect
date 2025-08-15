@@ -33,7 +33,7 @@ const createAuPairProfile = async (req, res) => {
       aboutAuPair,
       usingPairLinkFor,
       isFluent,
-      profileImage, 
+      profileImage,
       images = [],
       languages = [],
       pets = [],
@@ -278,6 +278,7 @@ const pauseAuFamily = async (req, res) => {
     }
 
     const typeField = `is${type.charAt(0).toUpperCase() + type.slice(1)}`;
+    const pauseField = `${typeField}Paused`;
     if (!user.auPair || user.auPair[typeField] !== true) {
       return res.status(400).json({
         success: false,
@@ -285,7 +286,7 @@ const pauseAuFamily = async (req, res) => {
       });
     }
 
-    user.auPair.isPaused = true;
+    user.auPair[pauseField] = true;
     await user.save();
 
     return res.status(200).json({
@@ -294,9 +295,9 @@ const pauseAuFamily = async (req, res) => {
       data: {
         userId: user._id,
         type,
-        isPaused: true
+        [pauseField]: true
       }
-    });
+    }); 
 
   } catch (error) {
     console.error('Error in pauseAuFamily:', error);
@@ -339,6 +340,7 @@ const unpauseAuFamily = async (req, res) => {
     }
 
     const typeField = `is${type.charAt(0).toUpperCase() + type.slice(1)}`;
+    const pauseField = `${typeField}Paused`;
     if (!user.auPair || user.auPair[typeField] !== true) {
       return res.status(400).json({
         success: false,
@@ -346,7 +348,7 @@ const unpauseAuFamily = async (req, res) => {
       });
     }
 
-    user.auPair.isPaused = false;
+    user.auPair[pauseField] = false;
     await user.save();
 
     return res.status(200).json({
@@ -355,7 +357,7 @@ const unpauseAuFamily = async (req, res) => {
       data: {
         userId: user._id,
         type,
-        isPaused: false
+        [pauseField]: false
       }
     });
 

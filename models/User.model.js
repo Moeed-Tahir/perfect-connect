@@ -21,7 +21,7 @@ const ParentModelSchema = new mongoose.Schema({
     role: String
 }, { _id: false });
 
-const ChildModelSchema = new mongoose.Schema({
+const ChildModelSchema = new mongoose.Schema({  
     age: Number,
     name: String,
     gender: String,
@@ -72,6 +72,18 @@ const AuPairModelSchema = new mongoose.Schema({
     isPairLink: Boolean,
     isPaused: Boolean,
 
+    isPairConnectPaused: {
+        type: Boolean,
+        default: false
+    },
+    isPairHavenPaused: {
+        type: Boolean,
+        default: false
+    },
+    isPairLinkPaused: {
+        type: Boolean,
+        default: false
+    },
     // Basic Info
     age: Number,
     firstName: String,
@@ -113,6 +125,14 @@ const HostFamilyModelSchema = new mongoose.Schema({
     // Type Flags
     isPairConnect: Boolean,
     isPairHaven: Boolean,
+    isPairConnectPaused: {
+        type: Boolean,
+        default: false
+    },
+    isPairHavenPaused: {
+        type: Boolean,
+        default: false
+    },
     isPaused: Boolean,
     // Basic Info
     familyStructure: String,

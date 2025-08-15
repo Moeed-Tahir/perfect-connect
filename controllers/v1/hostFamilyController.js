@@ -266,7 +266,7 @@ const getAllHostFamily = async (req, res) => {
       }
 
       results = [user];
-    } 
+    }
     else {
       return res.status(400).json({
         success: false,
@@ -330,8 +330,8 @@ const pauseHostFamily = async (req, res) => {
             });
         }
 
-        // Set pause status specific to the type
-        user.hostFamily[`${type}Paused`] = true;
+        const pauseField = `${typeField}Paused`;
+        user.hostFamily[pauseField] = true;
         await user.save();
 
         return res.status(200).json({
@@ -340,7 +340,7 @@ const pauseHostFamily = async (req, res) => {
             data: {
                 userId: user._id,
                 type,
-                isPaused: true
+                [pauseField]: true
             }
         });
 
@@ -384,7 +384,7 @@ const unpauseHostFamily = async (req, res) => {
             });
         }
 
-        const typeField = `isPair${type.charAt(0).toUpperCase() + type.slice(1)}`;
+        const typeField = `is${type.charAt(0).toUpperCase() + type.slice(1)}`;
         if (!user.hostFamily || !user.hostFamily[typeField]) {
             return res.status(400).json({
                 success: false,
@@ -392,8 +392,8 @@ const unpauseHostFamily = async (req, res) => {
             });
         }
 
-        // Set pause status specific to the type
-        user.hostFamily[`${type}Paused`] = false;
+        const pauseField = `${typeField}Paused`;
+        user.hostFamily[pauseField] = false;
         await user.save();
 
         return res.status(200).json({
@@ -402,7 +402,7 @@ const unpauseHostFamily = async (req, res) => {
             data: {
                 userId: user._id,
                 type,
-                isPaused: false
+                [pauseField]: false
             }
         });
 
