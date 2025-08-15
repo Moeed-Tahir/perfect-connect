@@ -2,6 +2,7 @@ const AWS = require('aws-sdk');
 const User = require("../../models/User.model.js");
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require('uuid');
+
 const ObjectId = mongoose.Types.ObjectId;
 
 const s3 = new AWS.S3({
@@ -33,8 +34,8 @@ const createAuPairProfile = async (req, res) => {
       aboutAuPair,
       usingPairLinkFor,
       isFluent,
-      profileImage,
-      images = [],
+      profileImage = "", 
+      images = [],     
       languages = [],
       pets = [],
       expNskills = [],
@@ -53,13 +54,13 @@ const createAuPairProfile = async (req, res) => {
     if (!ObjectId.isValid(userId)) {
       return res.status(400).json({ message: "Invalid userId format" });
     }
-    const user = await User.findById(userId);
 
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (req.files && req.files.profileImage) {
+    if (req.files?.profileImage) {
       const file = req.files.profileImage;
       const fileExtension = file.name.split('.').pop();
       const randomKey = `${uuidv4()}.${fileExtension}`;
@@ -75,9 +76,8 @@ const createAuPairProfile = async (req, res) => {
       profileImage = uploadResult.Location;
     }
 
-    if (req.files && req.files.images) {
+    if (req.files?.images) {
       const uploadedImages = [];
-
       const imagesArray = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
 
       for (const img of imagesArray) {
@@ -164,6 +164,7 @@ const createAuPairProfile = async (req, res) => {
     });
   }
 };
+
 
 const getAllAuPair = async (req, res) => {
   try {
