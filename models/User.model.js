@@ -70,6 +70,7 @@ const AuPairModelSchema = new mongoose.Schema({
     isPairConnect: Boolean,
     isPairHaven: Boolean,
     isPairLink: Boolean,
+    isPaused: Boolean,
 
     // Basic Info
     age: Number,
