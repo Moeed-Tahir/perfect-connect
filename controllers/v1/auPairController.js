@@ -19,6 +19,10 @@ const createAuPairProfile = async (req, res) => {
       isPairConnect = false,
       isPairHaven = false,
       isPairLink = false,
+      isPaused = false,
+      isPairConnectPaused = false, 
+      isPairHavenPaused = false, 
+      isPairLinkPaused = false, 
       firstName,
       lastName,
       age,
@@ -103,6 +107,11 @@ const createAuPairProfile = async (req, res) => {
       isPairConnect,
       isPairHaven,
       isPairLink,
+      isPaused,
+      isPairConnectPaused,
+      isPairHavenPaused,
+      isPairLinkPaused,
+
       age,
       firstName,
       lastName,
@@ -116,9 +125,10 @@ const createAuPairProfile = async (req, res) => {
       aboutYourJourney,
       aboutYourself,
       aboutAuPair,
-      usingPairLinkFor,
+      usingPairLinkFor: Array.isArray(usingPairLinkFor) ? usingPairLinkFor : [],
       isFluent,
       profileImage,
+
       images,
       languages: Array.isArray(languages) ? languages : [],
       pets: Array.isArray(pets) ? pets : [],
@@ -126,10 +136,12 @@ const createAuPairProfile = async (req, res) => {
       temperament: Array.isArray(temperament) ? temperament : [],
       thingsILove: Array.isArray(thingsILove) ? thingsILove : [],
       favSpots: Array.isArray(favSpots) ? favSpots : [],
+
       whatMakesMeSmile: {
-        category: whatMakesMeSmile.category || "",
-        description: whatMakesMeSmile.description || ""
+        category: whatMakesMeSmile?.category || "",
+        description: whatMakesMeSmile?.description || ""
       },
+
       agency: agency || {
         name: "",
         id: "",
