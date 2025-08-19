@@ -24,9 +24,9 @@ require('./sockets/chatSockets')(io);
 (async () => {
     try {
         await connectDB();
-        app.use(fileUpload());
         app.use(cors());
         app.use(express.json());
+        app.use(fileUpload());
 
         app.get('/', (req, res) => {
             res.send('Welcome back to Perfect Host API!');

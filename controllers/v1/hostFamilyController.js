@@ -11,6 +11,18 @@ const s3 = new AWS.S3({
 
 const createHostFamily = async (req, res) => {
   try {
+    const parseIfString = (value) => {
+      if (typeof value === 'string') {
+        try {
+          return JSON.parse(value);
+        } catch (error) {
+          console.warn(`Failed to parse JSON string: ${value}`);
+          return value; 
+        }
+      }
+      return value;
+    };
+
     let {
       userId,
       isPairConnect,
@@ -44,6 +56,16 @@ const createHostFamily = async (req, res) => {
       requiredAuPairModel,
       optionalAuPairModel
     } = req.body;
+
+    firstParent = parseIfString(firstParent);
+    secondParent = parseIfString(secondParent);
+    agency = parseIfString(agency);
+    location = parseIfString(location);
+    requiredAuPairModel = parseIfString(requiredAuPairModel);
+    optionalAuPairModel = parseIfString(optionalAuPairModel);
+    pets = parseIfString(pets);
+    benefits = parseIfString(benefits);
+    dietaryPrefs = parseIfString(dietaryPrefs);
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({
@@ -127,6 +149,28 @@ const createHostFamily = async (req, res) => {
       }
     }
 
+    const defaultParent = {
+      age: 0,
+      firstName: "",
+      lastName: "",
+      nationality: "",
+      occupation: "",
+      dailyLifestyle: "",
+      role: ""
+    };
+
+    const validatedFirstParent = firstParent ? {
+      ...defaultParent,
+      ...firstParent,
+      age: typeof firstParent.age === 'string' ? parseInt(firstParent.age) || 0 : firstParent.age || 0
+    } : defaultParent;
+
+    const validatedSecondParent = secondParent ? {
+      ...defaultParent,
+      ...secondParent,
+      age: typeof secondParent.age === 'string' ? parseInt(secondParent.age) || 0 : secondParent.age || 0
+    } : defaultParent;
+
     const updateData = {
       isHostFamily: true,
       hostFamily: {
@@ -135,7 +179,7 @@ const createHostFamily = async (req, res) => {
         isPaused,
         isPairConnectPaused,
         isPairHavenPaused,
-
+        
         familyStructure,
         familyName,
         primaryLanguage,
@@ -159,24 +203,8 @@ const createHostFamily = async (req, res) => {
 
         schedule: parsedSchedule && typeof parsedSchedule === 'object' ? parsedSchedule : {},
 
-        firstParent: firstParent || {
-          age: 0,
-          firstName: "",
-          lastName: "",
-          nationality: "",
-          occupation: "",
-          dailyLifestyle: "",
-          role: ""
-        },
-        secondParent: secondParent || {
-          age: 0,
-          firstName: "",
-          lastName: "",
-          nationality: "",
-          occupation: "",
-          dailyLifestyle: "",
-          role: ""
-        },
+        firstParent: validatedFirstParent,
+        secondParent: validatedSecondParent,
 
         agency: agency || {
           name: "",
@@ -235,7 +263,7 @@ const createHostFamily = async (req, res) => {
     return res.status(200).json({
       message: "Host family profile created successfully",
       data: {
-        user: updatedUser
+        user: updatedUser.hostFamily.toObject()
       }
     });
 
