@@ -11,18 +11,14 @@ const s3 = new AWS.S3({
   region: 'us-east-2'
 });
 
-const createAuPairProfile = async (req, res) => {
+const createAuPairProfile = async (req, res) => {  
   try {
     const { userId } = req.body;
-
+    
     let {
       isPairConnect = false,
       isPairHaven = false,
       isPairLink = false,
-      isPaused = false,
-      isPairConnectPaused = false,
-      isPairHavenPaused = false,
-      isPairLinkPaused = false,
       firstName,
       lastName,
       age,
@@ -38,8 +34,8 @@ const createAuPairProfile = async (req, res) => {
       aboutAuPair,
       usingPairLinkFor,
       isFluent,
-      profileImage = "",
-      images = [],
+      profileImage = "", 
+      images = [],     
       languages = [],
       pets = [],
       expNskills = [],
@@ -50,6 +46,24 @@ const createAuPairProfile = async (req, res) => {
       agency,
       location
     } = req.body;
+
+    if (typeof agency === 'string') {
+      try {
+        agency = JSON.parse(agency);
+      } catch (parseError) {
+        console.warn('Failed to parse agency string:', agency, parseError);
+        agency = {};
+      }
+    }
+
+    if (typeof location === 'string') {
+      try {
+        location = JSON.parse(location);
+      } catch (parseError) {
+        console.warn('Failed to parse location string:', location, parseError);
+        location = {};
+      }
+    }
 
     if (!isPairConnect && !isPairHaven && !isPairLink) {
       return res.status(400).json({ message: "At least one au pair type must be selected" });
@@ -76,8 +90,15 @@ const createAuPairProfile = async (req, res) => {
         ContentType: file.mimetype
       };
 
-      const uploadResult = await s3.upload(params).promise();
-      profileImage = uploadResult.Location;
+      try {
+        const uploadResult = await s3.upload(params).promise();
+        profileImage = uploadResult.Location;
+      } catch (uploadError) {
+        console.error('Error uploading profile image:', uploadError);
+        throw new Error('Failed to upload profile image');
+      }
+    } else {
+      console.log('No profile image provided in request');
     }
 
     if (req.files?.images) {
@@ -95,11 +116,17 @@ const createAuPairProfile = async (req, res) => {
           ContentType: img.mimetype
         };
 
-        const uploadResult = await s3.upload(params).promise();
-        uploadedImages.push(uploadResult.Location);
+        try {
+          const uploadResult = await s3.upload(params).promise();
+          uploadedImages.push(uploadResult.Location);
+        } catch (uploadError) {
+          console.error('Error uploading image:', uploadError);
+        }
       }
 
       images = uploadedImages;
+    } else {
+      console.log('No additional images provided in request');
     }
 
     user.isAuPair = true;
@@ -107,11 +134,6 @@ const createAuPairProfile = async (req, res) => {
       isPairConnect,
       isPairHaven,
       isPairLink,
-      isPaused,
-      isPairConnectPaused,
-      isPairHavenPaused,
-      isPairLinkPaused,
-
       age,
       firstName,
       lastName,
@@ -125,10 +147,9 @@ const createAuPairProfile = async (req, res) => {
       aboutYourJourney,
       aboutYourself,
       aboutAuPair,
-      usingPairLinkFor: Array.isArray(usingPairLinkFor) ? usingPairLinkFor : [],
+      usingPairLinkFor,
       isFluent,
       profileImage,
-
       images,
       languages: Array.isArray(languages) ? languages : [],
       pets: Array.isArray(pets) ? pets : [],
@@ -136,28 +157,26 @@ const createAuPairProfile = async (req, res) => {
       temperament: Array.isArray(temperament) ? temperament : [],
       thingsILove: Array.isArray(thingsILove) ? thingsILove : [],
       favSpots: Array.isArray(favSpots) ? favSpots : [],
-
       whatMakesMeSmile: {
-        category: whatMakesMeSmile?.category || "",
-        description: whatMakesMeSmile?.description || ""
+        category: whatMakesMeSmile.category || "",
+        description: whatMakesMeSmile.description || ""
       },
-
-      agency: agency || {
-        name: "",
-        id: "",
-        currentStatus: "",
-        whichAgency: "",
-        wouldChangeAgency: false,
-        areYouCurrentlyHosting: false
+      agency: {
+        name: agency?.name || "",
+        id: agency?.id || "",
+        currentStatus: agency?.currentStatus || "",
+        whichAgency: agency?.whichAgency || "",
+        wouldChangeAgency: Boolean(agency?.wouldChangeAgency),
+        areYouCurrentlyHosting: Boolean(agency?.areYouCurrentlyHosting)
       },
-      location: location || {
-        zipCode: "",
-        state: "",
-        city: "",
-        infoAboutArea: "",
-        country: "",
-        nationality: "",
-        hostFamilyExpectedLocation: ""
+      location: {
+        zipCode: location?.zipCode || "",
+        state: location?.state || "",
+        city: location?.city || "",
+        infoAboutArea: location?.infoAboutArea || "",
+        country: location?.country || "",
+        nationality: location?.nationality || "",
+        hostFamilyExpectedLocation: location?.hostFamilyExpectedLocation || ""
       }
     };
 
@@ -165,18 +184,18 @@ const createAuPairProfile = async (req, res) => {
 
     return res.status(200).json({
       message: "Au Pair profile created/updated successfully",
-      data: { auPair: user.auPair.toObject() }
+      data: { user: user.auPair.toObject() }
     });
 
   } catch (error) {
-    console.error("Error creating au pair profile:", error);
     return res.status(500).json({
       message: "Internal server error",
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
     });
+  } finally {
+    console.log('Completed createAuPairProfile function execution');
   }
 };
-
 
 const getAllAuPair = async (req, res) => {
   try {
@@ -214,8 +233,6 @@ const getAllAuPair = async (req, res) => {
 
 const uploadTestImageToS3 = async (req, res) => {
   try {
-    console.log("Call");
-    console.log("sjksjs", req.file);
 
     if (!req.files || !req.files.TestImage) {
       return res.status(400).json({
@@ -310,7 +327,7 @@ const pauseAuFamily = async (req, res) => {
         type,
         [pauseField]: true
       }
-    });
+    }); 
 
   } catch (error) {
     console.error('Error in pauseAuFamily:', error);
