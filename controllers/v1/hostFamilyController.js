@@ -15,6 +15,9 @@ const createHostFamily = async (req, res) => {
       userId,
       isPairConnect,
       isPairHaven,
+      isPaused = false, 
+      isPairConnectPaused = false, 
+      isPairHavenPaused = false, 
       familyStructure,
       familyName,
       primaryLanguage,
@@ -41,7 +44,6 @@ const createHostFamily = async (req, res) => {
       requiredAuPairModel,
       optionalAuPairModel
     } = req.body;
-
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({
@@ -105,12 +107,35 @@ const createHostFamily = async (req, res) => {
       images = uploadedImages;
     }
 
+    let parsedSchedule = schedule;
+    if (typeof schedule === 'string') {
+      try {
+        parsedSchedule = JSON.parse(schedule);
+      } catch (error) {
+        console.warn('Failed to parse schedule JSON, using empty object');
+        parsedSchedule = {};
+      }
+    }
+
+    let parsedChildren = children;
+    if (typeof children === 'string') {
+      try {
+        parsedChildren = JSON.parse(children);
+      } catch (error) {
+        console.warn('Failed to parse children JSON, using empty array');
+        parsedChildren = [];
+      }
+    }
 
     const updateData = {
       isHostFamily: true,
       hostFamily: {
         isPairConnect,
         isPairHaven,
+        isPaused,
+        isPairConnectPaused,
+        isPairHavenPaused,
+
         familyStructure,
         familyName,
         primaryLanguage,
@@ -123,13 +148,17 @@ const createHostFamily = async (req, res) => {
         spaceInHome,
         householdAtmosphere,
         profileImage,
-        pets,
+
+        pets: Array.isArray(pets) ? pets : [],
         images,
-        benefits,
-        dietaryPrefs,
+        benefits: Array.isArray(benefits) ? benefits : [],
+        dietaryPrefs: Array.isArray(dietaryPrefs) ? dietaryPrefs : [],
+
         noOfChildren,
-        children,
-        schedule,
+        children: Array.isArray(parsedChildren) ? parsedChildren : [],
+
+        schedule: parsedSchedule && typeof parsedSchedule === 'object' ? parsedSchedule : {},
+
         firstParent: firstParent || {
           age: 0,
           firstName: "",
@@ -148,6 +177,7 @@ const createHostFamily = async (req, res) => {
           dailyLifestyle: "",
           role: ""
         },
+
         agency: agency || {
           name: "",
           id: "",
@@ -165,6 +195,7 @@ const createHostFamily = async (req, res) => {
           nationality: "",
           hostFamilyExpectedLocation: ""
         },
+
         requiredAuPairModel: requiredAuPairModel || {
           agencyName: "",
           country: "",
