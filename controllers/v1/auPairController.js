@@ -20,9 +20,9 @@ const createAuPairProfile = async (req, res) => {
       isPairHaven = false,
       isPairLink = false,
       isPaused = false,
-      isPairConnectPaused = false, 
-      isPairHavenPaused = false, 
-      isPairLinkPaused = false, 
+      isPairConnectPaused = false,
+      isPairHavenPaused = false,
+      isPairLinkPaused = false,
       firstName,
       lastName,
       age,
@@ -38,8 +38,8 @@ const createAuPairProfile = async (req, res) => {
       aboutAuPair,
       usingPairLinkFor,
       isFluent,
-      profileImage = "", 
-      images = [],     
+      profileImage = "",
+      images = [],
       languages = [],
       pets = [],
       expNskills = [],
@@ -165,7 +165,7 @@ const createAuPairProfile = async (req, res) => {
 
     return res.status(200).json({
       message: "Au Pair profile created/updated successfully",
-      data: { user: user.toObject() }
+      data: { auPair: user.auPair.toObject() }
     });
 
   } catch (error) {
@@ -310,7 +310,7 @@ const pauseAuFamily = async (req, res) => {
         type,
         [pauseField]: true
       }
-    }); 
+    });
 
   } catch (error) {
     console.error('Error in pauseAuFamily:', error);
