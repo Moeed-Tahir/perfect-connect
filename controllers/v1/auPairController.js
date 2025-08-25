@@ -11,14 +11,29 @@ const s3 = new AWS.S3({
   region: 'us-east-2'
 });
 
-const createAuPairProfile = async (req, res) => {  
+const createAuPairProfile = async (req, res) => {
   try {
-    const { userId } = req.body;
-    
+    const parseIfString = (value) => {
+      if (typeof value === "string") {
+        try {
+          return JSON.parse(value);
+        } catch (error) {
+          console.warn(`Failed to parse JSON string: ${value}`);
+          return value;
+        }
+      }
+      return value;
+    };
+
     let {
-      isPairConnect = false,
-      isPairHaven = false,
-      isPairLink = false,
+      userId,
+      isPairConnect,
+      isPairHaven,
+      isPairLink,
+      isPaused,
+      isPairConnectPaused,
+      isPairHavenPaused,
+      isPairLinkPaused,
       firstName,
       lastName,
       age,
@@ -34,166 +49,207 @@ const createAuPairProfile = async (req, res) => {
       aboutAuPair,
       usingPairLinkFor,
       isFluent,
-      profileImage = "", 
-      images = [],     
+      profileImage = "",
+      images = [],
       languages = [],
       pets = [],
       expNskills = [],
       temperament = [],
       thingsILove = [],
       favSpots = [],
-      whatMakesMeSmile = {},
+      whatMakesMeSmile,
       agency,
       location
     } = req.body;
 
-    if (typeof agency === 'string') {
-      try {
-        agency = JSON.parse(agency);
-      } catch (parseError) {
-        console.warn('Failed to parse agency string:', agency, parseError);
-        agency = {};
-      }
-    }
+    agency = parseIfString(agency);
+    location = parseIfString(location);
+    whatMakesMeSmile = parseIfString(whatMakesMeSmile);
+    languages = parseIfString(languages);
+    pets = parseIfString(pets);
+    expNskills = parseIfString(expNskills);
+    temperament = parseIfString(temperament);
+    thingsILove = parseIfString(thingsILove);
+    favSpots = parseIfString(favSpots);
 
-    if (typeof location === 'string') {
-      try {
-        location = JSON.parse(location);
-      } catch (parseError) {
-        console.warn('Failed to parse location string:', location, parseError);
-        location = {};
-      }
+    // Validate userId
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid userId is required",
+      });
     }
 
     if (!isPairConnect && !isPairHaven && !isPairLink) {
-      return res.status(400).json({ message: "At least one au pair type must be selected" });
+      return res.status(400).json({
+        success: false,
+        code: "NO_PROGRAM_SELECTED",
+        message: "At least one program must be selected",
+      });
     }
 
-    if (!ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: "Invalid userId format" });
-    }
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    let existingUser = await User.findById(userId).select(
+      "-password -otp -mobileOtp -__v"
+    );
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        code: "USER_NOT_FOUND",
+        message: "User not found",
+      });
     }
 
     if (req.files?.profileImage) {
       const file = req.files.profileImage;
-      const fileExtension = file.name.split('.').pop();
+      const fileExtension = file.name.split(".").pop();
       const randomKey = `${uuidv4()}.${fileExtension}`;
 
       const params = {
         Bucket: "perfect-connect",
         Key: randomKey,
         Body: file.data,
-        ContentType: file.mimetype
+        ContentType: file.mimetype,
       };
 
-      try {
-        const uploadResult = await s3.upload(params).promise();
-        profileImage = uploadResult.Location;
-      } catch (uploadError) {
-        console.error('Error uploading profile image:', uploadError);
-        throw new Error('Failed to upload profile image');
-      }
-    } else {
-      console.log('No profile image provided in request');
+      const uploadResult = await s3.upload(params).promise();
+      profileImage = uploadResult.Location;
     }
 
     if (req.files?.images) {
       const uploadedImages = [];
-      const imagesArray = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
+      const imagesArray = Array.isArray(req.files.images)
+        ? req.files.images
+        : [req.files.images];
 
       for (const img of imagesArray) {
-        const fileExtension = img.name.split('.').pop();
+        const fileExtension = img.name.split(".").pop();
         const randomKey = `${uuidv4()}.${fileExtension}`;
 
         const params = {
           Bucket: "perfect-connect",
           Key: randomKey,
           Body: img.data,
-          ContentType: img.mimetype
+          ContentType: img.mimetype,
         };
 
-        try {
-          const uploadResult = await s3.upload(params).promise();
-          uploadedImages.push(uploadResult.Location);
-        } catch (uploadError) {
-          console.error('Error uploading image:', uploadError);
-        }
+        const uploadResult = await s3.upload(params).promise();
+        uploadedImages.push(uploadResult.Location);
       }
 
       images = uploadedImages;
-    } else {
-      console.log('No additional images provided in request');
     }
 
-    user.isAuPair = true;
-    user.auPair = {
-      isPairConnect,
-      isPairHaven,
-      isPairLink,
-      age,
-      firstName,
-      lastName,
-      nationality,
-      areYouFluent,
-      availabilityDate,
-      durationMonth,
-      durationYear,
-      religion,
-      whichCountryAreYouFrom,
-      aboutYourJourney,
-      aboutYourself,
-      aboutAuPair,
-      usingPairLinkFor,
-      isFluent,
-      profileImage,
-      images,
-      languages: Array.isArray(languages) ? languages : [],
-      pets: Array.isArray(pets) ? pets : [],
-      expNskills: Array.isArray(expNskills) ? expNskills : [],
-      temperament: Array.isArray(temperament) ? temperament : [],
-      thingsILove: Array.isArray(thingsILove) ? thingsILove : [],
-      favSpots: Array.isArray(favSpots) ? favSpots : [],
+    const ensureArray = (value) => {
+      if (Array.isArray(value)) return value;
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
+    const defaultAgency = {
+      name: "",
+      id: "",
+      currentStatus: "",
+      whichAgency: "",
+      wouldChangeAgency: false,
+      areYouCurrentlyHosting: false
+    };
+
+    const defaultLocation = {
+      zipCode: "",
+      state: "",
+      city: "",
+      infoAboutArea: "",
+      country: "",
+      nationality: "",
+      hostFamilyExpectedLocation: ""
+    };
+
+    const defaultWhatMakesMeSmile = {
+      category: "",
+      description: ""
+    };
+
+    const updatedAuPair = {
+      ...existingUser.auPair?.toObject(),
+      isPairConnect: isPairConnect ?? existingUser.auPair?.isPairConnect,
+      isPairHaven: isPairHaven ?? existingUser.auPair?.isPairHaven,
+      isPairLink: isPairLink ?? existingUser.auPair?.isPairLink,
+      isPaused: isPaused ?? existingUser.auPair?.isPaused,
+      isPairConnectPaused: isPairConnectPaused ?? existingUser.auPair?.isPairConnectPaused,
+      isPairHavenPaused: isPairHavenPaused ?? existingUser.auPair?.isPairHavenPaused,
+      isPairLinkPaused: isPairLinkPaused ?? existingUser.auPair?.isPairLinkPaused,
+      
+      firstName: firstName ?? existingUser.auPair?.firstName,
+      lastName: lastName ?? existingUser.auPair?.lastName,
+      age: age ?? existingUser.auPair?.age,
+      nationality: nationality ?? existingUser.auPair?.nationality,
+      areYouFluent: areYouFluent ?? existingUser.auPair?.areYouFluent,
+      availabilityDate: availabilityDate ?? existingUser.auPair?.availabilityDate,
+      durationMonth: durationMonth ?? existingUser.auPair?.durationMonth,
+      durationYear: durationYear ?? existingUser.auPair?.durationYear,
+      religion: religion ?? existingUser.auPair?.religion,
+      whichCountryAreYouFrom: whichCountryAreYouFrom ?? existingUser.auPair?.whichCountryAreYouFrom,
+      aboutYourJourney: aboutYourJourney ?? existingUser.auPair?.aboutYourJourney,
+      aboutYourself: aboutYourself ?? existingUser.auPair?.aboutYourself,
+      aboutAuPair: aboutAuPair ?? existingUser.auPair?.aboutAuPair,
+      usingPairLinkFor: usingPairLinkFor ?? existingUser.auPair?.usingPairLinkFor,
+      isFluent: isFluent ?? existingUser.auPair?.isFluent,
+      
+      profileImage: profileImage || existingUser.auPair?.profileImage,
+      images: images.length > 0 ? images : existingUser.auPair?.images || [],
+      
+      languages: ensureArray(languages) || existingUser.auPair?.languages || [],
+      pets: ensureArray(pets) || existingUser.auPair?.pets || [],
+      expNskills: ensureArray(expNskills) || existingUser.auPair?.expNskills || [],
+      temperament: ensureArray(temperament) || existingUser.auPair?.temperament || [],
+      thingsILove: ensureArray(thingsILove) || existingUser.auPair?.thingsILove || [],
+      favSpots: ensureArray(favSpots) || existingUser.auPair?.favSpots || [],
+      
       whatMakesMeSmile: {
-        category: whatMakesMeSmile.category || "",
-        description: whatMakesMeSmile.description || ""
+        ...defaultWhatMakesMeSmile,
+        ...(existingUser.auPair?.whatMakesMeSmile || {}),
+        ...(whatMakesMeSmile || {})
       },
+      
       agency: {
-        name: agency?.name || "",
-        id: agency?.id || "",
-        currentStatus: agency?.currentStatus || "",
-        whichAgency: agency?.whichAgency || "",
-        wouldChangeAgency: Boolean(agency?.wouldChangeAgency),
-        areYouCurrentlyHosting: Boolean(agency?.areYouCurrentlyHosting)
+        ...defaultAgency,
+        ...(existingUser.auPair?.agency || {}),
+        ...(agency || {})
       },
+      
       location: {
-        zipCode: location?.zipCode || "",
-        state: location?.state || "",
-        city: location?.city || "",
-        infoAboutArea: location?.infoAboutArea || "",
-        country: location?.country || "",
-        nationality: location?.nationality || "",
-        hostFamilyExpectedLocation: location?.hostFamilyExpectedLocation || ""
+        ...defaultLocation,
+        ...(existingUser.auPair?.location || {}),
+        ...(location || {})
       }
     };
 
-    await user.save();
+    // Update user
+    existingUser.isAuPair = true;
+    existingUser.auPair = updatedAuPair;
+
+    const savedUser = await existingUser.save();
 
     return res.status(200).json({
-      message: "Au Pair profile created/updated successfully",
-      data: { user: user.auPair.toObject() }
+      success: true,
+      message: "Au Pair profile updated successfully",
+      data: { user: savedUser },
     });
-
   } catch (error) {
+    console.error("Error creating/updating au pair profile:", error);
     return res.status(500).json({
+      success: false,
+      code: "SERVER_ERROR",
       message: "Internal server error",
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
-  } finally {
-    console.log('Completed createAuPairProfile function execution');
   }
 };
 

@@ -4,6 +4,6 @@ const connectionUserController = require('../../controllers/v1/connectionUsersCo
 
 router.post('/addConnection', connectionUserController.addConnection);
 router.post('/removeConnection', connectionUserController.removeConnection);
-router.post('/getConnectionsByReporter', connectionUserController.getConnectionsByReporter);
+router.post('/getCommonalities', connectionUserController.getCommonalities);
 
 module.exports = router;

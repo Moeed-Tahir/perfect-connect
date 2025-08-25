@@ -57,7 +57,6 @@ const createHostFamily = async (req, res) => {
       optionalAuPairModel
     } = req.body;
 
-    // parse stringified JSON
     firstParent = parseIfString(firstParent);
     secondParent = parseIfString(secondParent);
     agency = parseIfString(agency);
@@ -90,7 +89,6 @@ const createHostFamily = async (req, res) => {
       });
     }
 
-    // handle profile image upload
     if (req.files?.profileImage) {
       const file = req.files.profileImage;
       const fileExtension = file.name.split(".").pop();
@@ -107,7 +105,6 @@ const createHostFamily = async (req, res) => {
       profileImage = uploadResult.Location;
     }
 
-    // handle multiple images upload
     if (req.files?.images) {
       const uploadedImages = [];
       const imagesArray = Array.isArray(req.files.images)
@@ -132,7 +129,6 @@ const createHostFamily = async (req, res) => {
       images = uploadedImages;
     }
 
-    // parse children & schedule safely
     let parsedSchedule = schedule;
     if (typeof schedule === "string") {
       try {
@@ -151,7 +147,6 @@ const createHostFamily = async (req, res) => {
       }
     }
 
-    // default parent
     const defaultParent = {
       age: 0,
       firstName: "",
@@ -184,7 +179,6 @@ const createHostFamily = async (req, res) => {
       }
       : defaultParent;
 
-    // ✅ fetch existing user first
     let existingUser = await User.findById(userId).select(
       "-password -otp -mobileOtp -__v"
     );
@@ -196,9 +190,8 @@ const createHostFamily = async (req, res) => {
       });
     }
 
-    // ✅ merge old + new hostFamily data
     const updatedHostFamily = {
-      ...existingUser.hostFamily?.toObject(), // keep old data
+      ...existingUser.hostFamily?.toObject(),
       isPairConnect: isPairConnect ?? existingUser.hostFamily?.isPairConnect,
       isPairHaven: isPairHaven ?? existingUser.hostFamily?.isPairHaven,
       isPaused: isPaused ?? existingUser.hostFamily?.isPaused,
@@ -243,7 +236,6 @@ const createHostFamily = async (req, res) => {
         optionalAuPairModel ?? existingUser.hostFamily?.optionalAuPairModel,
     };
 
-    // ✅ update user with merged hostFamily
     existingUser.isHostFamily = true;
     existingUser.hostFamily = updatedHostFamily;
 
