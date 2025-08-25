@@ -12,12 +12,12 @@ const s3 = new AWS.S3({
 const createHostFamily = async (req, res) => {
   try {
     const parseIfString = (value) => {
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         try {
           return JSON.parse(value);
         } catch (error) {
           console.warn(`Failed to parse JSON string: ${value}`);
-          return value; 
+          return value;
         }
       }
       return value;
@@ -27,9 +27,9 @@ const createHostFamily = async (req, res) => {
       userId,
       isPairConnect,
       isPairHaven,
-      isPaused = false, 
-      isPairConnectPaused = false, 
-      isPairHavenPaused = false, 
+      isPaused,
+      isPairConnectPaused,
+      isPairHavenPaused,
       familyStructure,
       familyName,
       primaryLanguage,
@@ -42,13 +42,13 @@ const createHostFamily = async (req, res) => {
       spaceInHome,
       householdAtmosphere,
       profileImage = "",
-      pets = [],
-      images = [],
-      benefits = [],
-      dietaryPrefs = [],
-      noOfChildren = 0,
-      children = [],
-      schedule = {},
+      pets,
+      images,
+      benefits,
+      dietaryPrefs,
+      noOfChildren,
+      children,
+      schedule,
       firstParent,
       secondParent,
       agency,
@@ -57,6 +57,7 @@ const createHostFamily = async (req, res) => {
       optionalAuPairModel
     } = req.body;
 
+    // parse stringified JSON
     firstParent = parseIfString(firstParent);
     secondParent = parseIfString(secondParent);
     agency = parseIfString(agency);
@@ -70,7 +71,7 @@ const createHostFamily = async (req, res) => {
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({
         success: false,
-        message: 'Valid userId is required',
+        message: "Valid userId is required",
       });
     }
 
@@ -78,17 +79,18 @@ const createHostFamily = async (req, res) => {
       return res.status(400).json({
         success: false,
         code: "NO_PROGRAM_SELECTED",
-        message: "At least one program must be selected"
+        message: "At least one program must be selected",
       });
     }
 
-    if (isPairConnect && !isPairHaven && noOfChildren !== children.length) {
+    if (isPairConnect && !isPairHaven && noOfChildren !== children?.length) {
       return res.status(400).json({
         success: false,
-        message: "Number of children does not match children array length"
+        message: "Number of children does not match children array length",
       });
     }
 
+    // handle profile image upload
     if (req.files?.profileImage) {
       const file = req.files.profileImage;
       const fileExtension = file.name.split(".").pop();
@@ -105,6 +107,7 @@ const createHostFamily = async (req, res) => {
       profileImage = uploadResult.Location;
     }
 
+    // handle multiple images upload
     if (req.files?.images) {
       const uploadedImages = [];
       const imagesArray = Array.isArray(req.files.images)
@@ -129,26 +132,26 @@ const createHostFamily = async (req, res) => {
       images = uploadedImages;
     }
 
+    // parse children & schedule safely
     let parsedSchedule = schedule;
-    if (typeof schedule === 'string') {
+    if (typeof schedule === "string") {
       try {
         parsedSchedule = JSON.parse(schedule);
-      } catch (error) {
-        console.warn('Failed to parse schedule JSON, using empty object');
+      } catch {
         parsedSchedule = {};
       }
     }
 
     let parsedChildren = children;
-    if (typeof children === 'string') {
+    if (typeof children === "string") {
       try {
         parsedChildren = JSON.parse(children);
-      } catch (error) {
-        console.warn('Failed to parse children JSON, using empty array');
+      } catch {
         parsedChildren = [];
       }
     }
 
+    // default parent
     const defaultParent = {
       age: 0,
       firstName: "",
@@ -156,128 +159,112 @@ const createHostFamily = async (req, res) => {
       nationality: "",
       occupation: "",
       dailyLifestyle: "",
-      role: ""
+      role: "",
     };
 
-    const validatedFirstParent = firstParent ? {
-      ...defaultParent,
-      ...firstParent,
-      age: typeof firstParent.age === 'string' ? parseInt(firstParent.age) || 0 : firstParent.age || 0
-    } : defaultParent;
-
-    const validatedSecondParent = secondParent ? {
-      ...defaultParent,
-      ...secondParent,
-      age: typeof secondParent.age === 'string' ? parseInt(secondParent.age) || 0 : secondParent.age || 0
-    } : defaultParent;
-
-    const updateData = {
-      isHostFamily: true,
-      hostFamily: {
-        isPairConnect,
-        isPairHaven,
-        isPaused,
-        isPairConnectPaused,
-        isPairHavenPaused,
-        
-        familyStructure,
-        familyName,
-        primaryLanguage,
-        secondaryLanguage,
-        availabilityDate,
-        durationYear,
-        durationMonth,
-        religion,
-        aboutYourFamily,
-        spaceInHome,
-        householdAtmosphere,
-        profileImage,
-
-        pets: Array.isArray(pets) ? pets : [],
-        images,
-        benefits: Array.isArray(benefits) ? benefits : [],
-        dietaryPrefs: Array.isArray(dietaryPrefs) ? dietaryPrefs : [],
-
-        noOfChildren,
-        children: Array.isArray(parsedChildren) ? parsedChildren : [],
-
-        schedule: parsedSchedule && typeof parsedSchedule === 'object' ? parsedSchedule : {},
-
-        firstParent: validatedFirstParent,
-        secondParent: validatedSecondParent,
-
-        agency: agency || {
-          name: "",
-          id: "",
-          currentStatus: "",
-          whichAgency: "",
-          wouldChangeAgency: false,
-          areYouCurrentlyHosting: false
-        },
-        location: location || {
-          zipCode: "",
-          state: "",
-          city: "",
-          infoAboutArea: "",
-          country: "",
-          nationality: "",
-          hostFamilyExpectedLocation: ""
-        },
-
-        requiredAuPairModel: requiredAuPairModel || {
-          agencyName: "",
-          country: "",
-          abilityToDrive: "",
-          experience: "",
-          language: "",
-          status: ""
-        },
-        optionalAuPairModel: optionalAuPairModel || {
-          interest: "",
-          language: "",
-          pets: "",
-          religion: "",
-          temperament: ""
-        }
+    const validatedFirstParent = firstParent
+      ? {
+        ...defaultParent,
+        ...firstParent,
+        age:
+          typeof firstParent.age === "string"
+            ? parseInt(firstParent.age) || 0
+            : firstParent.age || 0,
       }
-    };
+      : defaultParent;
 
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { $set: updateData },
-      {
-        new: true,
-        runValidators: true,
-        select: '-password -otp -mobileOtp -__v'
+    const validatedSecondParent = secondParent
+      ? {
+        ...defaultParent,
+        ...secondParent,
+        age:
+          typeof secondParent.age === "string"
+            ? parseInt(secondParent.age) || 0
+            : secondParent.age || 0,
       }
+      : defaultParent;
+
+    // ✅ fetch existing user first
+    let existingUser = await User.findById(userId).select(
+      "-password -otp -mobileOtp -__v"
     );
-
-    if (!updatedUser) {
+    if (!existingUser) {
       return res.status(404).json({
         success: false,
         code: "USER_NOT_FOUND",
-        message: "User not found"
+        message: "User not found",
       });
     }
 
+    // ✅ merge old + new hostFamily data
+    const updatedHostFamily = {
+      ...existingUser.hostFamily?.toObject(), // keep old data
+      isPairConnect: isPairConnect ?? existingUser.hostFamily?.isPairConnect,
+      isPairHaven: isPairHaven ?? existingUser.hostFamily?.isPairHaven,
+      isPaused: isPaused ?? existingUser.hostFamily?.isPaused,
+      isPairConnectPaused:
+        isPairConnectPaused ?? existingUser.hostFamily?.isPairConnectPaused,
+      isPairHavenPaused:
+        isPairHavenPaused ?? existingUser.hostFamily?.isPairHavenPaused,
+
+      familyStructure: familyStructure ?? existingUser.hostFamily?.familyStructure,
+      familyName: familyName ?? existingUser.hostFamily?.familyName,
+      primaryLanguage: primaryLanguage ?? existingUser.hostFamily?.primaryLanguage,
+      secondaryLanguage:
+        secondaryLanguage ?? existingUser.hostFamily?.secondaryLanguage,
+      availabilityDate: availabilityDate ?? existingUser.hostFamily?.availabilityDate,
+      durationYear: durationYear ?? existingUser.hostFamily?.durationYear,
+      durationMonth: durationMonth ?? existingUser.hostFamily?.durationMonth,
+      religion: religion ?? existingUser.hostFamily?.religion,
+      aboutYourFamily: aboutYourFamily ?? existingUser.hostFamily?.aboutYourFamily,
+      spaceInHome: spaceInHome ?? existingUser.hostFamily?.spaceInHome,
+      householdAtmosphere:
+        householdAtmosphere ?? existingUser.hostFamily?.householdAtmosphere,
+      profileImage: profileImage || existingUser.hostFamily?.profileImage,
+
+      pets: pets ?? existingUser.hostFamily?.pets ?? [],
+      images: images ?? existingUser.hostFamily?.images ?? [],
+      benefits: benefits ?? existingUser.hostFamily?.benefits ?? [],
+      dietaryPrefs: dietaryPrefs ?? existingUser.hostFamily?.dietaryPrefs ?? [],
+
+      noOfChildren: noOfChildren ?? existingUser.hostFamily?.noOfChildren,
+      children: parsedChildren ?? existingUser.hostFamily?.children ?? [],
+
+      schedule: parsedSchedule ?? existingUser.hostFamily?.schedule ?? {},
+
+      firstParent: validatedFirstParent ?? existingUser.hostFamily?.firstParent,
+      secondParent: validatedSecondParent ?? existingUser.hostFamily?.secondParent,
+
+      agency: agency ?? existingUser.hostFamily?.agency,
+      location: location ?? existingUser.hostFamily?.location,
+      requiredAuPairModel:
+        requiredAuPairModel ?? existingUser.hostFamily?.requiredAuPairModel,
+      optionalAuPairModel:
+        optionalAuPairModel ?? existingUser.hostFamily?.optionalAuPairModel,
+    };
+
+    // ✅ update user with merged hostFamily
+    existingUser.isHostFamily = true;
+    existingUser.hostFamily = updatedHostFamily;
+
+    const savedUser = await existingUser.save();
+
     return res.status(200).json({
-      message: "Host family profile created successfully",
-      data: {
-        user: updatedUser.hostFamily.toObject()
-      }
+      success: true,
+      message: "Host family profile updated successfully",
+      data: { user: savedUser },
     });
-
   } catch (error) {
-    console.error("Error creating host family profile:", error);
-
+    console.error("Error creating/updating host family profile:", error);
     return res.status(500).json({
       success: false,
       code: "SERVER_ERROR",
       message: "Internal server error",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
+
 
 const getAllHostFamily = async (req, res) => {
   try {

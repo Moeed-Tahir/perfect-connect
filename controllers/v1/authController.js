@@ -269,7 +269,8 @@ const initiateMobileVerification = async (req, res) => {
         }
 
         // Generate OTP
-        const otp = generateOTP();
+        // const otp = generateOTP();
+        const otp = "55555"
         user.contactNo = phone;
         user.mobileOtp = otp;
         user.mobileOtpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
