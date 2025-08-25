@@ -472,6 +472,50 @@ const deleteUser = async (req, res) => {
     }
 }
 
+const updateUser = async (req, res) => {
+  try {
+    const { userId, email, contactNo } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "User ID is required" });
+    }
+
+    if (!email && !contactNo) {
+      return res.status(400).json({ success: false, message: "Please provide email or contact number to update" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (email && email !== user.email) {
+      const existingEmail = await User.findOne({ email });
+      if (existingEmail) {
+        return res.status(400).json({ success: false, message: "Email already in use" });
+      }
+      user.email = email;
+    }
+
+    if (contactNo && contactNo !== user.contactNo) {
+      const existingContact = await User.findOne({ contactNo });
+      if (existingContact) {
+        return res.status(400).json({ success: false, message: "Contact number already in use" });
+      }
+      user.contactNo = contactNo;
+      user.isMobileVerified = false;
+    }
+
+    await user.save();
+
+    return res.status(200).json({ success: true, message: "User updated successfully", data: user });
+
+  } catch (error) {
+    console.error("Update User Error:", error);
+    return res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });
+  }
+};
+
 module.exports = {
     signUpWithEmail,
     verifyEmailOTP,
@@ -481,4 +525,5 @@ module.exports = {
     loginWithEmail,
     getCurrentUserData,
     deleteUser,
+    updateUser
 };

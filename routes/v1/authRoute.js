@@ -10,6 +10,7 @@ router.post("/login-with-email", authController.loginWithEmail);
 router.post("/signup-with-phone", jwtMiddleware, authController.initiateMobileVerification);
 router.post("/deleteUser", jwtMiddleware, authController.deleteUser);
 router.post("/verify-phone-otp", jwtMiddleware, authController.verifyMobileOTP);
+router.post("/updateUser", jwtMiddleware, authController.updateUser);
 router.get("/me", authController.getCurrentUserData);
 
 module.exports = router;

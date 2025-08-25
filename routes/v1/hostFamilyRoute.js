@@ -7,13 +7,6 @@ router.post("/create-host-family-profile", jwtMiddleware, hostFamilyController.c
 router.post("/getAllHostFamily", jwtMiddleware, hostFamilyController.getAllHostFamily);
 router.post("/pauseHostFamily", jwtMiddleware, hostFamilyController.pauseHostFamily);
 router.post("/unpauseHostFamily", jwtMiddleware, hostFamilyController.unpauseHostFamily);
+router.post("/likeHostFamilyProfile", jwtMiddleware, hostFamilyController.likeHostFamilyProfile);
 
 module.exports = router;
-
-// if email not varified, send OTP to email
-// if mobile not varified, send OTP to mobile
-// if phone is varifed and taken, no other can use it 
-// refreash token with each API call, and update token evrytime user hit an API 
-// add data and token to data
-// add family name to host family schema
-// number issue resolve 

@@ -281,7 +281,7 @@ const createHostFamily = async (req, res) => {
 
 const getAllHostFamily = async (req, res) => {
   try {
-    const { type, userId, page = 1, length = 10 } = req.body;
+    const { type, userId, page = 1, length = 10, includeLiked = false } = req.body;
 
     if (!type) {
       return res.status(400).json({
@@ -291,14 +291,24 @@ const getAllHostFamily = async (req, res) => {
     }
 
     let results = [];
+    let matchConditions = {};
 
     if (type === 'pairConnect') {
+      // Base match conditions for pairConnect
+      matchConditions = {
+        isHostFamily: true,
+        'hostFamily.isPairConnect': true,
+        'hostFamily.isPairConnectPaused': { $ne: true }
+      };
+
+      // Add likeProfile condition if includeLiked is specified
+      if (includeLiked !== undefined) {
+        matchConditions['hostFamily.likeProfile'] = includeLiked;
+      }
+
       results = await User.aggregate([
         {
-          $match: {
-            isHostFamily: true,
-            'hostFamily.isPairConnect': true
-          }
+          $match: matchConditions
         },
         { $sample: { size: length * 5 } },
         { $skip: (page - 1) * length },
@@ -313,16 +323,25 @@ const getAllHostFamily = async (req, res) => {
         });
       }
 
-      const user = await User.findOne({
+      // Base match conditions for pairHaven
+      matchConditions = {
         _id: userId,
         isHostFamily: true,
-        'hostFamily.isPairHaven': true
-      }).lean();
+        'hostFamily.isPairHaven': true,
+        'hostFamily.isPairHavenPaused': { $ne: true }
+      };
+
+      // Add likeProfile condition if includeLiked is specified
+      if (includeLiked !== undefined) {
+        matchConditions['hostFamily.likeProfile'] = includeLiked;
+      }
+
+      const user = await User.findOne(matchConditions).lean();
 
       if (!user) {
         return res.status(404).json({
           success: false,
-          message: 'Host family not found or not marked as pairHaven'
+          message: 'Host family not found or not matching the criteria'
         });
       }
 
@@ -339,7 +358,8 @@ const getAllHostFamily = async (req, res) => {
       success: true,
       data: results,
       page,
-      length
+      length,
+      total: results.length
     });
 
   } catch (error) {
@@ -477,4 +497,53 @@ const unpauseHostFamily = async (req, res) => {
   }
 };
 
-module.exports = { createHostFamily, getAllHostFamily, pauseHostFamily, unpauseHostFamily };
+const likeHostFamilyProfile = async (req, res) => {
+    try {
+        const { userId, status } = req.body;
+
+        if (!userId || typeof status !== 'boolean') {
+            return res.status(400).json({
+                success: false,
+                message: "userId and status (true/false) are required"
+            });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        if (!user.isHostFamily || !user.hostFamily) {
+            return res.status(400).json({
+                success: false,
+                message: "This user does not have a Host Family profile"
+            });
+        }
+
+        user.hostFamily.likeProfile = status;
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: `Host Family profile ${status ? 'liked' : 'unliked'} successfully`,
+            data: {
+                userId: user._id,
+                likeProfile: user.hostFamily.likeProfile
+            }
+        });
+
+    } catch (error) {
+        console.error("Error in likeHostFamilyProfile:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: error.message
+        });
+    }
+};
+
+
+module.exports = { likeHostFamilyProfile,createHostFamily, getAllHostFamily, pauseHostFamily, unpauseHostFamily };

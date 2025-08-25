@@ -21,7 +21,7 @@ const ParentModelSchema = new mongoose.Schema({
     role: String
 }, { _id: false });
 
-const ChildModelSchema = new mongoose.Schema({  
+const ChildModelSchema = new mongoose.Schema({
     age: Number,
     name: String,
     gender: String,
@@ -84,6 +84,10 @@ const AuPairModelSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    likeProfile: {
+        type: Boolean,
+        default: false
+    },
     // Basic Info
     age: Number,
     firstName: String,
@@ -133,7 +137,10 @@ const HostFamilyModelSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    isPaused: Boolean,
+    likeProfile: {
+        type: Boolean,
+        default: false
+    },
     // Basic Info
     familyStructure: String,
     primaryLanguage: String,

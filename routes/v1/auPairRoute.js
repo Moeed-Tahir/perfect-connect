@@ -8,5 +8,6 @@ router.post("/uploadTestImageToS3",jwtMiddleware, auPairController.uploadTestIma
 router.post("/getAllAuPair", jwtMiddleware, auPairController.getAllAuPair);
 router.post("/pauseAuFamily", jwtMiddleware, auPairController.pauseAuFamily);
 router.post("/unpauseAuFamily", jwtMiddleware, auPairController.unpauseAuFamily);
+router.post("/likeAuPairProfile", jwtMiddleware, auPairController.likeAuPairProfile);
 
 module.exports = router;

@@ -199,7 +199,7 @@ const createAuPairProfile = async (req, res) => {
 
 const getAllAuPair = async (req, res) => {
   try {
-    const { type, page = 1, length = 10 } = req.body;
+    const { type, userId, page = 1, length = 10 } = req.body;
 
     if (!type) {
       return res.status(400).json({ success: false, message: 'Type is required' });
@@ -217,11 +217,20 @@ const getAllAuPair = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid type value' });
     }
 
+    // Fetch the user's liked Au Pair IDs
+    const user = await User.findById(userId).select('likedAuPairs');
+    const likedIds = user?.likedAuPairs || [];
+
     const results = await User.aggregate([
       { $match: matchQuery },
       { $sample: { size: length } },
       { $skip: (page - 1) * length },
-      { $limit: length }
+      { $limit: length },
+      {
+        $addFields: {
+          isLiked: { $in: ['$_id', likedIds] }
+        }
+      }
     ]);
 
     return res.status(200).json({ success: true, data: results, page, length });
@@ -401,10 +410,59 @@ const unpauseAuFamily = async (req, res) => {
   }
 };
 
+const likeAuPairProfile = async (req, res) => {
+    try {
+        const { userId, status } = req.body;
+
+        if (!userId || typeof status !== 'boolean') {
+            return res.status(400).json({
+                success: false,
+                message: "userId and status (true/false) are required"
+            });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        if (!user.isAuPair || !user.auPair) {
+            return res.status(400).json({
+                success: false,
+                message: "This user does not have an Au Pair profile"
+            });
+        }
+
+        user.auPair.likeProfile = status;
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: `Profile ${status ? 'liked' : 'unliked'} successfully`,
+            data: {
+                userId: user._id,
+                likeProfile: user.auPair.likeProfile
+            }
+        });
+
+    } catch (error) {
+        console.error("Error in likeAuPairProfile:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
   createAuPairProfile,
   getAllAuPair,
   uploadTestImageToS3,
   pauseAuFamily,
-  unpauseAuFamily
+  unpauseAuFamily,
+  likeAuPairProfile
 };
