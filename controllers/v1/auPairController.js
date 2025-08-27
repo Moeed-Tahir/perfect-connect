@@ -3,8 +3,6 @@ const User = require("../../models/User.model.js");
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require('uuid');
 
-const ObjectId = mongoose.Types.ObjectId;
-
 const s3 = new AWS.S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -231,7 +229,6 @@ const createAuPairProfile = async (req, res) => {
       }
     };
 
-    // Update user
     existingUser.isAuPair = true;
     existingUser.auPair = updatedAuPair;
 
@@ -255,7 +252,13 @@ const createAuPairProfile = async (req, res) => {
 
 const getAllAuPair = async (req, res) => {
   try {
-    const { type, userId, page = 1, length = 10 } = req.body;
+    const { 
+      type, 
+      userId, 
+      page = 1, 
+      length = 10,
+      filters = {}
+    } = req.body;
 
     if (!type) {
       return res.status(400).json({ success: false, message: 'Type is required' });
@@ -265,23 +268,51 @@ const getAllAuPair = async (req, res) => {
 
     if (type === 'pairConnect') {
       matchQuery['auPair.isPairConnect'] = true;
+      matchQuery['auPair.isPairConnectPaused'] = { $ne: true };
     } else if (type === 'pairHaven') {
       matchQuery['auPair.isPairHaven'] = true;
+      matchQuery['auPair.isPairHavenPaused'] = { $ne: true };
     } else if (type === 'pairLink') {
       matchQuery['auPair.isPairLink'] = true;
+      matchQuery['auPair.isPairLinkPaused'] = { $ne: true };
     } else {
       return res.status(400).json({ success: false, message: 'Invalid type value' });
     }
 
-    // Fetch the user's liked Au Pair IDs
+    if (filters.gender) {
+      matchQuery['auPair.gender'] = filters.gender;
+    }
+
+    if (filters.ageMin || filters.ageMax) {
+      matchQuery['auPair.age'] = {};
+      if (filters.ageMin) matchQuery['auPair.age'].$gte = parseInt(filters.ageMin);
+      if (filters.ageMax) matchQuery['auPair.age'].$lte = parseInt(filters.ageMax);
+    }
+
+    if (filters.availabilityDate) {
+      matchQuery['auPair.availabilityDate'] = { 
+        $lte: new Date(filters.availabilityDate) 
+      };
+    }
+
+    if (filters.durationMin || filters.durationMax) {
+      matchQuery['auPair.durationMonth'] = {};
+      if (filters.durationMin) matchQuery['auPair.durationMonth'].$gte = parseInt(filters.durationMin);
+      if (filters.durationMax) matchQuery['auPair.durationMonth'].$lte = parseInt(filters.durationMax);
+    }
+
+    if (filters.driving) {
+      matchQuery['auPair.abilityToDrive'] = filters.driving;
+    }
+
     const user = await User.findById(userId).select('likedAuPairs');
     const likedIds = user?.likedAuPairs || [];
 
     const results = await User.aggregate([
       { $match: matchQuery },
-      { $sample: { size: length } },
-      { $skip: (page - 1) * length },
-      { $limit: length },
+      { $sample: { size: parseInt(length) * 5 } },
+      { $skip: (parseInt(page) - 1) * parseInt(length) },
+      { $limit: parseInt(length) },
       {
         $addFields: {
           isLiked: { $in: ['$_id', likedIds] }

@@ -1,12 +1,12 @@
 const mongoose = require('mongoose');
 
 const connectionUserSchema = new mongoose.Schema({
-  reporterId: {
+  user1Id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  reportedUserId: {
+  user2Id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
@@ -14,9 +14,9 @@ const connectionUserSchema = new mongoose.Schema({
   commonalities: {
     type: Object,
     default: { message: "No commonalities found" }
-  }
+  },
 }, { timestamps: true });
 
-connectionUserSchema.index({ reporterId: 1, reportedUserId: 1 }, { unique: true });
+connectionUserSchema.index({ user1Id: 1, user2Id: 1 }, { unique: true });
 
 module.exports = mongoose.model('ConnectionUser', connectionUserSchema);

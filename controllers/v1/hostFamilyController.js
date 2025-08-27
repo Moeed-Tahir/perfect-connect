@@ -257,10 +257,16 @@ const createHostFamily = async (req, res) => {
   }
 };
 
-
 const getAllHostFamily = async (req, res) => {
   try {
-    const { type, userId, page = 1, length = 10, includeLiked = false } = req.body;
+    const { 
+      type, 
+      userId, 
+      page = 1, 
+      length = 10, 
+      includeLiked = false,
+      filters = {} 
+    } = req.body;
 
     if (!type) {
       return res.status(400).json({
@@ -273,71 +279,142 @@ const getAllHostFamily = async (req, res) => {
     let matchConditions = {};
 
     if (type === 'pairConnect') {
-      // Base match conditions for pairConnect
       matchConditions = {
         isHostFamily: true,
         'hostFamily.isPairConnect': true,
         'hostFamily.isPairConnectPaused': { $ne: true }
       };
-
-      // Add likeProfile condition if includeLiked is specified
-      if (includeLiked !== undefined) {
-        matchConditions['hostFamily.likeProfile'] = includeLiked;
-      }
-
-      results = await User.aggregate([
-        {
-          $match: matchConditions
-        },
-        { $sample: { size: length * 5 } },
-        { $skip: (page - 1) * length },
-        { $limit: length }
-      ]);
-    }
-    else if (type === 'pairHaven') {
+    } else if (type === 'pairHaven') {
       if (!userId) {
         return res.status(400).json({
           success: false,
           message: 'User ID is required for pairHaven'
         });
       }
-
-      // Base match conditions for pairHaven
       matchConditions = {
-        _id: userId,
+        _id: mongoose.Types.ObjectId(userId),
         isHostFamily: true,
         'hostFamily.isPairHaven': true,
         'hostFamily.isPairHavenPaused': { $ne: true }
       };
-
-      // Add likeProfile condition if includeLiked is specified
-      if (includeLiked !== undefined) {
-        matchConditions['hostFamily.likeProfile'] = includeLiked;
-      }
-
-      const user = await User.findOne(matchConditions).lean();
-
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: 'Host family not found or not matching the criteria'
-        });
-      }
-
-      results = [user];
-    }
-    else {
+    } else if (type === 'pairLink') {
+      matchConditions = {
+        isAuPair: true,
+        'auPair.isPairLink': true,
+        'auPair.isPairLinkPaused': { $ne: true }
+      };
+    } else {
       return res.status(400).json({
         success: false,
         message: 'Invalid type value'
       });
     }
 
+    if (includeLiked !== undefined) {
+      if (type === 'pairLink') {
+        matchConditions['auPair.likeProfile'] = includeLiked;
+      } else {
+        matchConditions['hostFamily.likeProfile'] = includeLiked;
+      }
+    }
+
+    const {
+      numberOfChildren,
+      ageOfChildren,
+      location,
+      preferredState,
+      distance,
+      availabilityDate,
+      duration
+    } = filters;
+
+    if (type === 'pairConnect' || type === 'pairHaven') {
+      if (numberOfChildren) {
+        matchConditions['hostFamily.noOfChildren'] = numberOfChildren;
+      }
+
+      if (ageOfChildren && Array.isArray(ageOfChildren) && ageOfChildren.length > 0) {
+        matchConditions['hostFamily.children.age'] = { $in: ageOfChildren };
+      }
+
+      if (location) {
+        const locationRegex = new RegExp(location, 'i');
+        matchConditions['$or'] = [
+          { 'hostFamily.location.zipCode': locationRegex },
+          { 'hostFamily.location.city': locationRegex },
+          { 'hostFamily.location.state': locationRegex }
+        ];
+      }
+
+      if (preferredState) {
+        const stateRegex = new RegExp(preferredState, 'i');
+        matchConditions['hostFamily.location.state'] = stateRegex;
+      }
+
+      if (distance) {
+        matchConditions['hostFamily.location.distance'] = { $lte: distance };
+      }
+
+      if (availabilityDate) {
+        matchConditions['hostFamily.availabilityDate'] = availabilityDate;
+      }
+
+      if (duration) {
+        const [minDuration, maxDuration] = duration.split('-').map(Number);
+        matchConditions['hostFamily.durationMonth'] = {
+          $gte: minDuration,
+          $lte: maxDuration
+        };
+      }
+    } else if (type === 'pairLink') {
+      if (location) {
+        const locationRegex = new RegExp(location, 'i');
+        matchConditions['$or'] = [
+          { 'auPair.location.zipCode': locationRegex },
+          { 'auPair.location.city': locationRegex },
+          { 'auPair.location.state': locationRegex }
+        ];
+      }
+
+      if (preferredState) {
+        const stateRegex = new RegExp(preferredState, 'i');
+        matchConditions['auPair.location.state'] = stateRegex;
+      }
+
+      if (availabilityDate) {
+        matchConditions['auPair.availabilityDate'] = availabilityDate;
+      }
+
+      if (duration) {
+        const [minDuration, maxDuration] = duration.split('-').map(Number);
+        matchConditions['auPair.durationMonth'] = {
+          $gte: minDuration,
+          $lte: maxDuration
+        };
+      }
+    }
+
+    if (type === 'pairConnect') {
+      results = await User.aggregate([
+        {
+          $match: matchConditions
+        },
+        { $sample: { size: length * 5 } },
+        { $skip: (page - 1) * length },
+        { $limit: parseInt(length) }
+      ]);
+    } else if (type === 'pairHaven' || type === 'pairLink') {
+      results = await User.find(matchConditions)
+        .skip((page - 1) * length)
+        .limit(parseInt(length))
+        .lean();
+    }
+
     return res.status(200).json({
       success: true,
       data: results,
-      page,
-      length,
+      page: parseInt(page),
+      length: parseInt(length),
       total: results.length
     });
 
