@@ -226,6 +226,9 @@ const createLike = async (req, res) => {
         if (existingLike) {
             await LikeUser.findByIdAndDelete(existingLike._id);
             
+            await updateLikeFlag(likerUser, mainCategory, subCategory, false);
+            await likerUser.save();
+            
             const mutualLike = await LikeUser.findOne({ 
                 likerId: likedUserId, 
                 likedUserId: likerId,
@@ -267,6 +270,9 @@ const createLike = async (req, res) => {
         });
         
         isLike = true;
+        
+        await updateLikeFlag(likerUser, mainCategory, subCategory, true);
+        await likerUser.save();
         
         const mutualLike = await LikeUser.findOne({ 
             likerId: likedUserId, 
@@ -321,6 +327,18 @@ const createLike = async (req, res) => {
             success: false,
             message: error.message
         });
+    }
+};
+
+const updateLikeFlag = (user, mainCategory, subCategory, value) => {
+    const userSchema = mainCategory === 'auPair' ? user.auPair : user.hostFamily;
+    
+    if (!userSchema) return;
+    
+    const flagName = subCategory + 'Like';
+    
+    if (flagName in userSchema) {
+        userSchema[flagName] = value;
     }
 };
 

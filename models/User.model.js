@@ -84,7 +84,15 @@ const AuPairModelSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    likeProfile: {
+    isPairConnectLike: {
+        type: Boolean,
+        default: false
+    },
+    isPairHavenLike: {
+        type: Boolean,
+        default: false
+    },
+    isPairLinkLike: {
         type: Boolean,
         default: false
     },
@@ -137,7 +145,11 @@ const HostFamilyModelSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    likeProfile: {
+    isPairConnectLike: {
+        type: Boolean,
+        default: false
+    },
+    isPairHavenLike: {
         type: Boolean,
         default: false
     },

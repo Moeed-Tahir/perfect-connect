@@ -257,6 +257,177 @@ const createHostFamily = async (req, res) => {
   }
 };
 
+// const getAllHostFamily = async (req, res) => {
+//   try {
+//     const { 
+//       type, 
+//       userId, 
+//       page = 1, 
+//       length = 10, 
+//       includeLiked = false,
+//       filters = {} 
+//     } = req.body;
+
+//     if (!type) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Type is required'
+//       });
+//     }
+
+//     let results = [];
+//     let matchConditions = {};
+
+//     if (type === 'pairConnect') {
+//       matchConditions = {
+//         isHostFamily: true,
+//         'hostFamily.isPairConnect': true,
+//         'hostFamily.isPairConnectPaused': { $ne: true }
+//       };
+//     } else if (type === 'pairHaven') {
+//       if (!userId) {
+//         return res.status(400).json({
+//           success: false,
+//           message: 'User ID is required for pairHaven'
+//         });
+//       }
+//       matchConditions = {
+//         _id: mongoose.Types.ObjectId(userId),
+//         isHostFamily: true,
+//         'hostFamily.isPairHaven': true,
+//         'hostFamily.isPairHavenPaused': { $ne: true }
+//       };
+//     } else if (type === 'pairLink') {
+//       matchConditions = {
+//         isAuPair: true,
+//         'auPair.isPairLink': true,
+//         'auPair.isPairLinkPaused': { $ne: true }
+//       };
+//     } else {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Invalid type value'
+//       });
+//     }
+
+//     if (includeLiked !== undefined) {
+//       if (type === 'pairLink') {
+//         matchConditions['auPair.likeProfile'] = includeLiked;
+//       } else {
+//         matchConditions['hostFamily.likeProfile'] = includeLiked;
+//       }
+//     }
+
+//     const {
+//       numberOfChildren,
+//       ageOfChildren,
+//       location,
+//       preferredState,
+//       distance,
+//       availabilityDate,
+//       duration
+//     } = filters;
+
+//     if (type === 'pairConnect' || type === 'pairHaven') {
+//       if (numberOfChildren) {
+//         matchConditions['hostFamily.noOfChildren'] = numberOfChildren;
+//       }
+
+//       if (ageOfChildren && Array.isArray(ageOfChildren) && ageOfChildren.length > 0) {
+//         matchConditions['hostFamily.children.age'] = { $in: ageOfChildren };
+//       }
+
+//       if (location) {
+//         const locationRegex = new RegExp(location, 'i');
+//         matchConditions['$or'] = [
+//           { 'hostFamily.location.zipCode': locationRegex },
+//           { 'hostFamily.location.city': locationRegex },
+//           { 'hostFamily.location.state': locationRegex }
+//         ];
+//       }
+
+//       if (preferredState) {
+//         const stateRegex = new RegExp(preferredState, 'i');
+//         matchConditions['hostFamily.location.state'] = stateRegex;
+//       }
+
+//       if (distance) {
+//         matchConditions['hostFamily.location.distance'] = { $lte: distance };
+//       }
+
+//       if (availabilityDate) {
+//         matchConditions['hostFamily.availabilityDate'] = availabilityDate;
+//       }
+
+//       if (duration) {
+//         const [minDuration, maxDuration] = duration.split('-').map(Number);
+//         matchConditions['hostFamily.durationMonth'] = {
+//           $gte: minDuration,
+//           $lte: maxDuration
+//         };
+//       }
+//     } else if (type === 'pairLink') {
+//       if (location) {
+//         const locationRegex = new RegExp(location, 'i');
+//         matchConditions['$or'] = [
+//           { 'auPair.location.zipCode': locationRegex },
+//           { 'auPair.location.city': locationRegex },
+//           { 'auPair.location.state': locationRegex }
+//         ];
+//       }
+
+//       if (preferredState) {
+//         const stateRegex = new RegExp(preferredState, 'i');
+//         matchConditions['auPair.location.state'] = stateRegex;
+//       }
+
+//       if (availabilityDate) {
+//         matchConditions['auPair.availabilityDate'] = availabilityDate;
+//       }
+
+//       if (duration) {
+//         const [minDuration, maxDuration] = duration.split('-').map(Number);
+//         matchConditions['auPair.durationMonth'] = {
+//           $gte: minDuration,
+//           $lte: maxDuration
+//         };
+//       }
+//     }
+
+//     if (type === 'pairConnect') {
+//       results = await User.aggregate([
+//         {
+//           $match: matchConditions
+//         },
+//         { $sample: { size: length * 5 } },
+//         { $skip: (page - 1) * length },
+//         { $limit: parseInt(length) }
+//       ]);
+//     } else if (type === 'pairHaven' || type === 'pairLink') {
+//       results = await User.find(matchConditions)
+//         .skip((page - 1) * length)
+//         .limit(parseInt(length))
+//         .lean();
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       data: results,
+//       page: parseInt(page),
+//       length: parseInt(length),
+//       total: results.length
+//     });
+
+//   } catch (error) {
+//     console.error('Error in getAllHostFamily:', error);
+//     return res.status(500).json({
+//       success: false,
+//       message: 'Server Error',
+//       error: error.message
+//     });
+//   }
+// };
+
 const getAllHostFamily = async (req, res) => {
   try {
     const { 
@@ -265,7 +436,9 @@ const getAllHostFamily = async (req, res) => {
       page = 1, 
       length = 10, 
       includeLiked = false,
-      filters = {} 
+      pairHeavenFilters = {},
+      pairLinkFilters = {},
+      pairConnectFilters = {}
     } = req.body;
 
     if (!type) {
@@ -277,8 +450,10 @@ const getAllHostFamily = async (req, res) => {
 
     let results = [];
     let matchConditions = {};
+    let filters = {};
 
     if (type === 'pairConnect') {
+      filters = pairConnectFilters;
       matchConditions = {
         isHostFamily: true,
         'hostFamily.isPairConnect': true,
@@ -291,6 +466,7 @@ const getAllHostFamily = async (req, res) => {
           message: 'User ID is required for pairHaven'
         });
       }
+      filters = pairHeavenFilters;
       matchConditions = {
         _id: mongoose.Types.ObjectId(userId),
         isHostFamily: true,
@@ -298,6 +474,7 @@ const getAllHostFamily = async (req, res) => {
         'hostFamily.isPairHavenPaused': { $ne: true }
       };
     } else if (type === 'pairLink') {
+      filters = pairLinkFilters;
       matchConditions = {
         isAuPair: true,
         'auPair.isPairLink': true,
@@ -318,17 +495,16 @@ const getAllHostFamily = async (req, res) => {
       }
     }
 
-    const {
-      numberOfChildren,
-      ageOfChildren,
-      location,
-      preferredState,
-      distance,
-      availabilityDate,
-      duration
-    } = filters;
+    if (type === 'pairConnect') {
+      const {
+        numberOfChildren,
+        ageOfChildren,
+        location,
+        howfar,
+        availability,
+        duration
+      } = filters;
 
-    if (type === 'pairConnect' || type === 'pairHaven') {
       if (numberOfChildren) {
         matchConditions['hostFamily.noOfChildren'] = numberOfChildren;
       }
@@ -346,17 +522,12 @@ const getAllHostFamily = async (req, res) => {
         ];
       }
 
-      if (preferredState) {
-        const stateRegex = new RegExp(preferredState, 'i');
-        matchConditions['hostFamily.location.state'] = stateRegex;
+      if (howfar) {
+        matchConditions['hostFamily.location.distance'] = { $lte: howfar };
       }
 
-      if (distance) {
-        matchConditions['hostFamily.location.distance'] = { $lte: distance };
-      }
-
-      if (availabilityDate) {
-        matchConditions['hostFamily.availabilityDate'] = availabilityDate;
+      if (availability) {
+        matchConditions['hostFamily.availabilityDate'] = availability;
       }
 
       if (duration) {
@@ -366,31 +537,41 @@ const getAllHostFamily = async (req, res) => {
           $lte: maxDuration
         };
       }
+    } else if (type === 'pairHaven') {
+      const {
+        availability
+      } = filters;
+
+      if (availability) {
+        matchConditions['hostFamily.availabilityDate'] = availability;
+      }
     } else if (type === 'pairLink') {
-      if (location) {
-        const locationRegex = new RegExp(location, 'i');
-        matchConditions['$or'] = [
-          { 'auPair.location.zipCode': locationRegex },
-          { 'auPair.location.city': locationRegex },
-          { 'auPair.location.state': locationRegex }
-        ];
+      const {
+        languages,
+        age,
+        usingPairLinkFor,
+        state
+      } = filters;
+
+      if (languages && Array.isArray(languages) && languages.length > 0) {
+        matchConditions['auPair.languages'] = { $in: languages };
       }
 
-      if (preferredState) {
-        const stateRegex = new RegExp(preferredState, 'i');
-        matchConditions['auPair.location.state'] = stateRegex;
-      }
-
-      if (availabilityDate) {
-        matchConditions['auPair.availabilityDate'] = availabilityDate;
-      }
-
-      if (duration) {
-        const [minDuration, maxDuration] = duration.split('-').map(Number);
-        matchConditions['auPair.durationMonth'] = {
-          $gte: minDuration,
-          $lte: maxDuration
+      if (age && Array.isArray(age) && age.length === 2) {
+        const [minAge, maxAge] = age;
+        matchConditions['auPair.age'] = {
+          $gte: minAge,
+          $lte: maxAge
         };
+      }
+
+      if (usingPairLinkFor && Array.isArray(usingPairLinkFor) && usingPairLinkFor.length > 0) {
+        matchConditions['auPair.usingPairLinkFor'] = { $in: usingPairLinkFor };
+      }
+
+      if (state) {
+        const stateRegex = new RegExp(state, 'i');
+        matchConditions['auPair.location.state'] = stateRegex;
       }
     }
 
