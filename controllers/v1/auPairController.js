@@ -1,5 +1,6 @@
 const AWS = require('aws-sdk');
 const User = require("../../models/User.model.js");
+const ReportUser = require("../../models/ReportUser.model.js");
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require('uuid');
 
@@ -307,6 +308,11 @@ const getAllAuPair = async (req, res) => {
 
     const user = await User.findById(userId).select('likedAuPairs');
     const likedIds = user?.likedAuPairs || [];
+
+    const reportedUsers = await ReportUser.find({ reporterId: userId }).select('reportedUserId');
+    const reportedIds = reportedUsers.map(report => report.reportedUserId);
+
+    matchQuery['_id'] = { $nin: reportedIds };
 
     const results = await User.aggregate([
       { $match: matchQuery },

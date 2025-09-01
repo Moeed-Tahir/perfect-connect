@@ -396,7 +396,6 @@ const loginWithEmail = async (req, res) => {
 
 const getCurrentUserData = async (req, res) => {
     try {
-        // Get token from Authorization header
         const authHeader = req.headers.authorization;
 
         if (authHeader) {
@@ -411,7 +410,6 @@ const getCurrentUserData = async (req, res) => {
                     return res.status(401).json({ status: 'failed', message: 'User not found' });
                 }
 
-                // Exclude sensitive fields
                 user.password = undefined;
                 user.otp = undefined;
                 user.mobileOtp = undefined;

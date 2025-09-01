@@ -19,7 +19,6 @@ const findCommonAttributes = (likerUser, likedUser) => {
         const hostFamily = likerUser.hostFamily;
         const auPair = likedUser.auPair;
         
-        // Platform compatibility
         if (hostFamily.isPairConnect && auPair.isPairConnect) {
             commonAttributes.sharedPlatforms.push('PairConnect');
         }
@@ -50,7 +49,6 @@ const findCommonAttributes = (likerUser, likedUser) => {
             );
         }
         
-        // Temperament compatibility
         if (hostFamily.children && hostFamily.children.length > 0 && auPair.temperament && auPair.temperament.length > 0) {
             const childTemperaments = hostFamily.children.flatMap(child => 
                 child.temperaments || []
@@ -60,7 +58,6 @@ const findCommonAttributes = (likerUser, likedUser) => {
             );
         }
         
-        // Location compatibility
         if (hostFamily.location && auPair.location) {
             commonAttributes.locationCompatibility = {
                 sameCountry: hostFamily.location.country === auPair.location.country,
@@ -69,26 +66,22 @@ const findCommonAttributes = (likerUser, likedUser) => {
             };
         }
         
-        // Age compatibility
         if (hostFamily.children && hostFamily.children.length > 0 && auPair.age) {
             const childAges = hostFamily.children.map(child => child.age);
             const avgChildAge = childAges.reduce((sum, age) => sum + age, 0) / childAges.length;
             commonAttributes.ageCompatibility = Math.abs(auPair.age - avgChildAge) <= 15;
         }
         
-        // Pet compatibility
         if (hostFamily.pets && hostFamily.pets.length > 0 && auPair.pets && auPair.pets.length > 0) {
             commonAttributes.petCompatibility = hostFamily.pets.some(pet => 
                 auPair.pets.includes(pet)
             );
         }
         
-        // Religion compatibility
         if (hostFamily.religion && auPair.religion) {
             commonAttributes.religionCompatibility = hostFamily.religion === auPair.religion;
         }
         
-        // Schedule compatibility
         if (hostFamily.schedule && auPair.availabilityDate) {
             commonAttributes.scheduleCompatibility = true;
         }
@@ -97,7 +90,6 @@ const findCommonAttributes = (likerUser, likedUser) => {
         const auPair = likerUser.auPair;
         const hostFamily = likedUser.hostFamily;
         
-        // Platform compatibility
         if (auPair.isPairConnect && hostFamily.isPairConnect) {
             commonAttributes.sharedPlatforms.push('PairConnect');
         }
@@ -108,7 +100,6 @@ const findCommonAttributes = (likerUser, likedUser) => {
             commonAttributes.sharedPlatforms.push('PairLink');
         }
         
-        // Language compatibility - FIXED
         if (hostFamily.primaryLanguage && auPair.languages && auPair.languages.length > 0) {
             const hostLanguages = [
                 hostFamily.primaryLanguage, 
@@ -120,7 +111,6 @@ const findCommonAttributes = (likerUser, likedUser) => {
             );
         }
         
-        // Interests compatibility
         if (hostFamily.children && hostFamily.children.length > 0 && auPair.thingsILove && auPair.thingsILove.length > 0) {
             const childInterests = hostFamily.children.flatMap(child => 
                 child.interests || []
@@ -130,7 +120,6 @@ const findCommonAttributes = (likerUser, likedUser) => {
             );
         }
         
-        // Temperament compatibility
         if (hostFamily.children && hostFamily.children.length > 0 && auPair.temperament && auPair.temperament.length > 0) {
             const childTemperaments = hostFamily.children.flatMap(child => 
                 child.temperaments || []
@@ -140,7 +129,6 @@ const findCommonAttributes = (likerUser, likedUser) => {
             );
         }
         
-        // Location compatibility
         if (hostFamily.location && auPair.location) {
             commonAttributes.locationCompatibility = {
                 sameCountry: hostFamily.location.country === auPair.location.country,
@@ -149,32 +137,27 @@ const findCommonAttributes = (likerUser, likedUser) => {
             };
         }
         
-        // Age compatibility
         if (hostFamily.children && hostFamily.children.length > 0 && auPair.age) {
             const childAges = hostFamily.children.map(child => child.age);
             const avgChildAge = childAges.reduce((sum, age) => sum + age, 0) / childAges.length;
             commonAttributes.ageCompatibility = Math.abs(auPair.age - avgChildAge) <= 15;
         }
         
-        // Pet compatibility
         if (hostFamily.pets && hostFamily.pets.length > 0 && auPair.pets && auPair.pets.length > 0) {
             commonAttributes.petCompatibility = hostFamily.pets.some(pet => 
                 auPair.pets.includes(pet)
             );
         }
         
-        // Religion compatibility
         if (hostFamily.religion && auPair.religion) {
             commonAttributes.religionCompatibility = hostFamily.religion === auPair.religion;
         }
         
-        // Schedule compatibility
         if (hostFamily.schedule && auPair.availabilityDate) {
             commonAttributes.scheduleCompatibility = true;
         }
     }
     
-    // Calculate match percentage
     const totalChecks = 9;
     let matchScore = 0;
     
@@ -221,8 +204,6 @@ const createLike = async (req, res) => {
             subCategory 
         });
         
-        let isLike = false;
-        
         if (existingLike) {
             await LikeUser.findByIdAndDelete(existingLike._id);
             
@@ -231,9 +212,7 @@ const createLike = async (req, res) => {
             
             const mutualLike = await LikeUser.findOne({ 
                 likerId: likedUserId, 
-                likedUserId: likerId,
-                mainCategory,
-                subCategory
+                likedUserId: likerId
             });
             
             let response = {
@@ -255,8 +234,6 @@ const createLike = async (req, res) => {
                     ]
                 });
                 
-                const commonAttributes = findCommonAttributes(likerUser, likedUser);
-                response.data.commonAttributes = commonAttributes;
             }
             
             return res.status(200).json(response);
@@ -269,16 +246,12 @@ const createLike = async (req, res) => {
             subCategory 
         });
         
-        isLike = true;
-        
         await updateLikeFlag(likerUser, mainCategory, subCategory, true);
         await likerUser.save();
         
         const mutualLike = await LikeUser.findOne({ 
             likerId: likedUserId, 
-            likedUserId: likerId,
-            mainCategory,
-            subCategory
+            likedUserId: likerId
         });
         
         let response = {
@@ -302,10 +275,16 @@ const createLike = async (req, res) => {
                 user2Id: likedUserId,
                 commonalities: commonAttributes,
                 matchPercentage: commonAttributes.matchPercentage,
-                category: {
-                    mainCategory,
-                    subCategory
-                }
+                categories: [
+                    {
+                        mainCategory: mutualLike.mainCategory,
+                        subCategory: mutualLike.subCategory
+                    },
+                    {
+                        mainCategory,
+                        subCategory
+                    }
+                ]
             });
             
             response.data.commonAttributes = commonAttributes;
@@ -316,6 +295,7 @@ const createLike = async (req, res) => {
         
     } catch (error) {
         console.error("Error in createLike function:", error);
+
         if (error.code === 11000) {
             return res.status(400).json({
                 success: false,

@@ -13,12 +13,10 @@ const LikeUserSchema = new mongoose.Schema({
     },
     mainCategory: {
         type: String,
-        enum: ['hostFamily', 'auPair'],
         required: true
     },
     subCategory: {
         type: String,
-        enum: ['isPairConnect', 'isPairHaven', 'isPairLink'],
         required: true
     },
     createdAt: {
@@ -26,8 +24,6 @@ const LikeUserSchema = new mongoose.Schema({
         default: Date.now
     }
 });
-
-LikeUserSchema.index({ likerId: 1, likedUserId: 1, mainCategory: 1, subCategory: 1 }, { unique: true });
 
 const LikeUser = mongoose.model('LikeUser', LikeUserSchema);
 
