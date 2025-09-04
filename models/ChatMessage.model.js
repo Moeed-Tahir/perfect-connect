@@ -1,6 +1,12 @@
+// ChatMessage.model.js
 const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema({
+  conversationId: {
+    type: String,
+    required: true,
+    index: true
+  },
   sender: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -13,9 +19,14 @@ const messageSchema = new mongoose.Schema({
   },
   text: {
     type: String,
-    required: true
+    required: true,
+    maxlength: 1000 
   },
   read: {
+    type: Boolean,
+    default: false
+  },
+  delivered: {
     type: Boolean,
     default: false
   },
@@ -25,8 +36,9 @@ const messageSchema = new mongoose.Schema({
   }
 });
 
-messageSchema.index({ sender: 1, receiver: 1, createdAt: 1 });
+// Compound index for better query performance
+messageSchema.index({ conversationId: 1, createdAt: 1 });
+messageSchema.index({ receiver: 1, read: 1 }); 
 
 const Message = mongoose.model('Message', messageSchema);
-
 module.exports = Message;
