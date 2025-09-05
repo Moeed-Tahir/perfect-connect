@@ -113,7 +113,6 @@ const AuPairModelSchema = new mongoose.Schema({
     isFluent: Boolean,
     aboutAuPair: String,
     profileImage: String,
-
     // Lists
     images: [String],
     languages: [String],
