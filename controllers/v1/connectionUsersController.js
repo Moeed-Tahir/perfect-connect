@@ -4,7 +4,7 @@ const getAllConnections = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.body;
 
-    const pageNum = parseInt(page);
+    const pageNum = parseInt(page); 
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
 

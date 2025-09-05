@@ -3,6 +3,7 @@ const User = require("../../models/User.model.js");
 const { v4: uuidv4 } = require('uuid');
 const AWS = require('aws-sdk');
 const ReportUser = require("../../models/ReportUser.model.js");
+const LikeUser = require('../../models/LikeUser.model');
 
 const s3 = new AWS.S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -267,7 +268,8 @@ const getAllHostFamily = async (req, res) => {
       length = 10, 
       pairHeavenFilters = {},
       pairLinkFilters = {},
-      pairConnectFilters = {}
+      pairConnectFilters = {},
+      includeLiked = false
     } = req.body;
 
     if (!type) {
@@ -278,9 +280,18 @@ const getAllHostFamily = async (req, res) => {
     }
 
     let reportedIds = [];
+    let likedIds = [];
+    
     if (userId) {
+      // Get reported users
       const reportedUsers = await ReportUser.find({ reporterId: userId }).select('reportedUserId');
       reportedIds = reportedUsers.map(report => report.reportedUserId);
+
+      // Get liked users if includeLiked is false
+      if (!includeLiked) {
+        const likedUsers = await LikeUser.find({ userId: userId }).select('likedUserId');
+        likedIds = likedUsers.map(like => like.likedUserId);
+      }
     }
 
     let results = [];
@@ -293,9 +304,14 @@ const getAllHostFamily = async (req, res) => {
         isHostFamily: true,
         'hostFamily.isPairConnect': true,
         'hostFamily.isPairConnectPaused': { $ne: true },
-        // Exclude reported users
         _id: { $nin: reportedIds }
       };
+
+      // Exclude liked users if includeLiked is false
+      if (!includeLiked && likedIds.length > 0) {
+        matchConditions._id.$nin = [...matchConditions._id.$nin, ...likedIds];
+      }
+
     } else if (type === 'pairHaven') {
       if (!userId) {
         return res.status(400).json({
@@ -305,22 +321,32 @@ const getAllHostFamily = async (req, res) => {
       }
       filters = pairHeavenFilters;
       matchConditions = {
-        _id: mongoose.Types.ObjectId(userId),
+        _id: new mongoose.Types.ObjectId(userId), // FIXED: Added 'new' keyword
         isHostFamily: true,
         'hostFamily.isPairHaven': true,
         'hostFamily.isPairHavenPaused': { $ne: true },
-        // Exclude reported users
         _id: { $nin: reportedIds }
       };
+
+      // Exclude liked users if includeLiked is false
+      if (!includeLiked && likedIds.length > 0) {
+        matchConditions._id.$nin = [...matchConditions._id.$nin, ...likedIds];
+      }
+
     } else if (type === 'pairLink') {
       filters = pairLinkFilters;
       matchConditions = {
         isAuPair: true,
         'auPair.isPairLink': true,
         'auPair.isPairLinkPaused': { $ne: true },
-        // Exclude reported users
         _id: { $nin: reportedIds }
       };
+
+      // Exclude liked users if includeLiked is false
+      if (!includeLiked && likedIds.length > 0) {
+        matchConditions._id.$nin = [...matchConditions._id.$nin, ...likedIds];
+      }
+
     } else {
       return res.status(400).json({
         success: false,
@@ -328,6 +354,7 @@ const getAllHostFamily = async (req, res) => {
       });
     }
 
+    // Apply filters based on type
     if (type === 'pairConnect') {
       const {
         numberOfChildren,
@@ -408,6 +435,7 @@ const getAllHostFamily = async (req, res) => {
       }
     }
 
+    // Execute query based on type
     if (type === 'pairConnect') {
       results = await User.aggregate([
         {
@@ -424,12 +452,21 @@ const getAllHostFamily = async (req, res) => {
         .lean();
     }
 
+    // Get total count for pagination
+    let totalCount = 0;
+    if (type === 'pairConnect') {
+      totalCount = await User.countDocuments(matchConditions);
+    } else if (type === 'pairHaven' || type === 'pairLink') {
+      totalCount = await User.countDocuments(matchConditions);
+    }
+
     return res.status(200).json({
       success: true,
       data: results,
       page: parseInt(page),
       length: parseInt(length),
-      total: results.length
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / length)
     });
 
   } catch (error) {
