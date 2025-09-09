@@ -1,6 +1,7 @@
 const LikeUser = require("../../models/LikeUser.model");
 const User = require("../../models/User.model");
 const ConnectionUser = require("../../models/ConnectionUser.model");
+const mongoose = require("mongoose");
 
 const findCommonAttributes = (likerUser, likedUser) => {
   const commonAttributes = {
@@ -240,9 +241,12 @@ const findCommonAttributes = (likerUser, likedUser) => {
 
 const createLike = async (req, res) => {
   try {
+    console.log('createLike function called with:', req.body);
+
     const { likerId, likedUserId, mainCategory, subCategory } = req.body;
 
     if (!likerId || !likedUserId || !mainCategory || !subCategory) {
+      console.log('Missing required fields:', { likerId, likedUserId, mainCategory, subCategory });
       return res.status(400).json({
         success: false,
         message:
@@ -250,16 +254,35 @@ const createLike = async (req, res) => {
       });
     }
 
-    const likerUser = await User.findById(likerId);
-    const likedUser = await User.findById(likedUserId);
+    if (!mongoose.Types.ObjectId.isValid(likerId) ||
+      !mongoose.Types.ObjectId.isValid(likedUserId)) {
+      console.log('Invalid ObjectId format:', { likerId, likedUserId });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID format",
+      });
+    }
+
+    console.log('Fetching users from database...');
+    const [likerUser, likedUser] = await Promise.all([
+      User.findById(likerId),
+      User.findById(likedUserId)
+    ]);
 
     if (!likerUser || !likedUser) {
+      console.log('User not found:', { likerId, likedUserId });
       return res.status(404).json({
         success: false,
         message: "User not found",
       });
     }
 
+    console.log('Users found successfully:', {
+      likerName: likerUser.name,
+      likedName: likedUser.name
+    });
+
+    console.log('Checking for existing like...');
     const existingLike = await LikeUser.findOne({
       likerId,
       likedUserId,
@@ -267,22 +290,24 @@ const createLike = async (req, res) => {
       subCategory,
     });
 
-    let isLike = false;
+    let response;
 
     if (existingLike) {
+      console.log('Existing like found, processing unlike scenario');
       await LikeUser.findByIdAndDelete(existingLike._id);
+      console.log('Like removed from database');
 
       await updateLikeFlag(likerUser, mainCategory, subCategory, false);
       await likerUser.save();
+      console.log('Like flag updated to false');
 
+      console.log('Checking for mutual like...');
       const mutualLike = await LikeUser.findOne({
         likerId: likedUserId,
-        likedUserId: likerId,
-        mainCategory,
-        subCategory,
+        likedUserId: likerId
       });
 
-      let response = {
+      response = {
         success: true,
         message: "Like removed successfully",
         data: {
@@ -294,121 +319,148 @@ const createLike = async (req, res) => {
       };
 
       if (mutualLike) {
-        const likerConnections = await ConnectionUser.findOne({
-          userId: likerId,
-        });
-
-        if (likerConnections) {
-          likerConnections.connections = likerConnections.connections.filter(
-            (conn) => conn.user._id.toString() !== likedUserId.toString()
-          );
-
-          if (likerConnections.connections.length === 0) {
-            await ConnectionUser.deleteOne({ userId: likerId });
-          } else {
-            await likerConnections.save();
-          }
-        }
-
-        const likedConnections = await ConnectionUser.findOne({
-          userId: likedUserId,
-        });
-
-        if (likedConnections) {
-          likedConnections.connections = likedConnections.connections.filter(
-            (conn) => conn.user._id.toString() !== likerId.toString()
-          );
-          if (likedConnections.connections.length === 0) {
-            await ConnectionUser.deleteOne({ userId: likedUserId });
-          } else {
-            await likedConnections.save();
-          }
-        }
-
+        console.log('Mutual like found, removing connection...');
+        await removeConnection(likerId, likedUserId);
         const commonAttributes = findCommonAttributes(likerUser, likedUser);
         response.data.commonAttributes = commonAttributes;
+        console.log('Connection removed successfully');
+      } else {
+        console.log('No mutual like found');
       }
-
-      return res.status(200).json(response);
-    }
-    const newLike = await LikeUser.findOneAndUpdate(
-      { likerId, likedUserId, mainCategory, subCategory },
-      {
-        $setOnInsert: {
-          likerId,
-          likedUserId,
-          mainCategory,
-          subCategory,
-          createdAt: new Date(),
-        },
-      },
-      { upsert: true, new: true }
-    );
-    isLike = true;
-
-    await updateLikeFlag(likerUser, mainCategory, subCategory, true);
-    await likerUser.save();
-
-    const mutualLike = await LikeUser.findOne({
-      likerId: likedUserId,
-      likedUserId: likerId,
-      mainCategory,
-      subCategory,
-    });
-
-    let response = {
-      success: true,
-      message: "Like created successfully",
-      data: {
-        like: newLike,
-        isLike: true,
-        isMatch: Boolean(mutualLike),
+    } else {
+      console.log('No existing like found, processing like scenario');
+      const newLike = new LikeUser({
+        likerId,
+        likedUserId,
         mainCategory,
         subCategory,
-      },
-    };
+      });
+      await newLike.save();
+      console.log('New like created in database:', newLike._id);
 
-    if (mutualLike) {
-      console.log("Mutual like found, creating connection");
-      const commonAttributes = findCommonAttributes(likerUser, likedUser);
+      await updateLikeFlag(likerUser, mainCategory, subCategory, true);
+      await likerUser.save();
+      console.log('Like flag updated to true');
 
-      await ConnectionUser.findOneAndUpdate(
-        { userId: likerId, "connections.user._id": { $ne: likedUser._id } },
-        {
-          $push: {
-            connections: { user: likedUser, commonalities: commonAttributes },
-          },
+      console.log('Checking for mutual like...');
+      const mutualLike = await LikeUser.findOne({
+        likerId: likedUserId,
+        likedUserId: likerId
+      });
+
+      response = {
+        success: true,
+        message: "Like created successfully",
+        data: {
+          like: newLike,
+          isLike: true,
+          isMatch: Boolean(mutualLike),
+          mainCategory,
+          subCategory,
         },
-        { upsert: true, new: true }
-      );
+      };
 
-      await ConnectionUser.findOneAndUpdate(
-        { userId: likedUserId, "connections.user._id": { $ne: likerUser._id } },
-        {
-          $push: {
-            connections: { user: likerUser, commonalities: commonAttributes },
-          },
-        },
-        { upsert: true, new: true }
-      );
+      if (mutualLike) {
+        console.log("Mutual like found, creating connections");
+        const commonAttributes = findCommonAttributes(likerUser, likedUser);
+        console.log('Common attributes calculated:', commonAttributes);
 
-      response.data.commonAttributes = commonAttributes;
+        await createSingleConnection(likerId, likedUserId, commonAttributes);
+
+        response.data.commonAttributes = commonAttributes;
+        console.log('Connections created successfully');
+      } else {
+        console.log('No mutual like found');
+      }
     }
 
-    res.status(201).json(response);
+    console.log('Sending response:', response);
+    res.status(200).json(response);
   } catch (error) {
     console.error("Error in createLike function:", error);
-    if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: "Like already exists for this category",
-      });
-    }
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    });
 
     res.status(500).json({
       success: false,
       message: error.message,
     });
+  }
+};
+
+const createSingleConnection = async (userId1, userId2, commonAttributes) => {
+  try {
+    const [user1, user2] = await Promise.all([
+      User.findById(userId1),
+      User.findById(userId2)
+    ]);
+
+    if (!user1 || !user2) {
+      throw new Error("One or both users not found");
+    }
+
+    const sortedUserIds = [userId1, userId2].sort();
+    const user1Obj = user1.toObject ? user1.toObject() : user1;
+    const user2Obj = user2.toObject ? user2.toObject() : user2;
+    const userObjects = [user1Obj, user2Obj];
+
+    const existingConnection = await ConnectionUser.findOne({
+      users: { 
+        $all: sortedUserIds,
+        $size: 2
+      }
+    });
+
+    let connection;
+
+    if (existingConnection) {
+      connection = await ConnectionUser.findByIdAndUpdate(
+        existingConnection._id,
+        { 
+          commonalities: commonAttributes,
+          userObjects: userObjects
+        },
+        { new: true }
+      );
+      console.log('Existing connection updated:', connection._id);
+    } else {
+      connection = await ConnectionUser.create({
+        users: sortedUserIds,
+        userObjects: userObjects,
+        commonalities: commonAttributes
+      });
+      console.log('New connection created:', connection._id);
+    }
+
+    return connection;
+  } catch (error) {
+    console.error("Error creating single connection:", error);
+    throw error;
+  }
+};
+
+const removeConnection = async (userId1, userId2) => {
+  try {
+    const result = await ConnectionUser.findOneAndDelete({
+      users: { 
+        $all: [userId1, userId2],
+        $size: 2
+      }
+    });
+
+    if (!result) {
+      console.log('No connection found to remove');
+      return null;
+    }
+
+    console.log('Connection removed between users');
+    return result;
+  } catch (error) {
+    console.error("Error removing connection:", error);
+    throw error;
   }
 };
 

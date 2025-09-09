@@ -31,16 +31,17 @@ const signUpWithEmail = async (req, res) => {
                 });
             } else if (!existingUser.isOtpVerified) {
                 // If user exists but not verified, send OTP
-                const otp = generateOTP();
+                const otp = 5555;
                 existingUser.otp = otp;
                 existingUser.otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
                 existingUser.isOtpVerified = false; // Reset OTP verification status
                 await existingUser.save();
-                await sendOTP(email, otp);
+                // await sendOTP(email, otp);
                 res.status(200).json({
                     success: true,
                     message: "OTP sent to your email",
                     data: {
+                        otp,
                         email,
                         requiresOtp: true,
                         userId: existingUser._id,
@@ -52,7 +53,7 @@ const signUpWithEmail = async (req, res) => {
         }
 
         // Generate OTP and expiration (5 minutes from now)
-        const otp = generateOTP();
+        const otp = "55555";
         const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
 
         // Create new user with only essential fields
@@ -70,13 +71,14 @@ const signUpWithEmail = async (req, res) => {
         await newUser.save();
 
         // Send OTP email (in production, you would actually send it)
-        await sendOTP(email, otp);
+        // await sendOTP(email, otp);
 
         // Respond with success (don't send OTP in response in production)
         res.status(200).json({
             success: true,
             message: "OTP sent to your email",
             data: {
+                otp,
                 email,
                 requiresOtp: true,
                 isHostFamily: newUser.isHostFamily,
@@ -205,18 +207,18 @@ const resendEmailOTP = async (req, res) => {
         }
 
         // Generate new OTP
-        const otp = generateOTP();
+        const otp = "55555";
         user.otp = otp;
         user.otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
         await user.save();
 
         // Send OTP (in production, implement actual sending)
-        await sendOTP(email, otp);
+        // await sendOTP(email, otp);
 
         res.status(200).json({
             success: true,
             message: "New OTP sent to your email",
-            data: { email }
+            data: { email,otp }
         });
 
     } catch (error) {
@@ -269,7 +271,7 @@ const initiateMobileVerification = async (req, res) => {
         }
 
         // Generate OTP
-        // const otp = generateOTP();
+        // const otp = "55555";
         const otp = "55555"
         user.contactNo = phone;
         user.mobileOtp = otp;
@@ -286,7 +288,7 @@ const initiateMobileVerification = async (req, res) => {
                 id: user._id,
                 phone: user.contactNo,
                 requiresOtp: true,
-                otp: otp // Don't send OTP in production response
+                otp: otp 
 
             }
         });
@@ -365,18 +367,19 @@ const loginWithEmail = async (req, res) => {
         }
 
         // genrate OTP for login
-        const otp = generateOTP();
+        const otp = "55555";
         user.otp = otp;
         user.otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
         user.isOtpVerified = false; // Reset OTP verification status
         await user.save();
 
-        await sendOTP(email, otp);
+        // await sendOTP(email, otp);
 
         res.status(200).json({
             success: true,
             message: "OTP sent to your email for login",
             data: {
+                otp,
                 email,
                 requiresOtp: true,
                 userId: user._id
