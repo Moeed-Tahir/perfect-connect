@@ -241,16 +241,13 @@ const findCommonAttributes = (likerUser, likedUser) => {
 
 const createLike = async (req, res) => {
   try {
-    console.log('createLike function called with:', req.body);
-
     const { likerId, likedUserId, mainCategory, subCategory } = req.body;
 
     if (!likerId || !likedUserId || !mainCategory || !subCategory) {
       console.log('Missing required fields:', { likerId, likedUserId, mainCategory, subCategory });
       return res.status(400).json({
         success: false,
-        message:
-          "Missing required fields: likerId, likedUserId, mainCategory, subCategory",
+        message: "Missing required fields: likerId, likedUserId, mainCategory, subCategory",
       });
     }
 
@@ -263,7 +260,6 @@ const createLike = async (req, res) => {
       });
     }
 
-    console.log('Fetching users from database...');
     const [likerUser, likedUser] = await Promise.all([
       User.findById(likerId),
       User.findById(likedUserId)
@@ -277,12 +273,6 @@ const createLike = async (req, res) => {
       });
     }
 
-    console.log('Users found successfully:', {
-      likerName: likerUser.name,
-      likedName: likedUser.name
-    });
-
-    console.log('Checking for existing like...');
     const existingLike = await LikeUser.findOne({
       likerId,
       likedUserId,
@@ -293,19 +283,23 @@ const createLike = async (req, res) => {
     let response;
 
     if (existingLike) {
-      console.log('Existing like found, processing unlike scenario');
+      // Remove the like
       await LikeUser.findByIdAndDelete(existingLike._id);
-      console.log('Like removed from database');
 
+      // Update like flag
       await updateLikeFlag(likerUser, mainCategory, subCategory, false);
       await likerUser.save();
-      console.log('Like flag updated to false');
 
-      console.log('Checking for mutual like...');
+      // Check if there was a mutual like
       const mutualLike = await LikeUser.findOne({
         likerId: likedUserId,
         likedUserId: likerId
       });
+
+      // If there was a mutual like, remove the connection
+      if (mutualLike) {
+        await removeConnection(likerId, likedUserId);
+      }
 
       response = {
         success: true,
@@ -317,18 +311,8 @@ const createLike = async (req, res) => {
           subCategory,
         },
       };
-
-      if (mutualLike) {
-        console.log('Mutual like found, removing connection...');
-        await removeConnection(likerId, likedUserId);
-        const commonAttributes = findCommonAttributes(likerUser, likedUser);
-        response.data.commonAttributes = commonAttributes;
-        console.log('Connection removed successfully');
-      } else {
-        console.log('No mutual like found');
-      }
     } else {
-      console.log('No existing like found, processing like scenario');
+      // Create new like
       const newLike = new LikeUser({
         likerId,
         likedUserId,
@@ -336,13 +320,12 @@ const createLike = async (req, res) => {
         subCategory,
       });
       await newLike.save();
-      console.log('New like created in database:', newLike._id);
 
+      // Update like flag
       await updateLikeFlag(likerUser, mainCategory, subCategory, true);
       await likerUser.save();
-      console.log('Like flag updated to true');
 
-      console.log('Checking for mutual like...');
+      // Check for mutual like
       const mutualLike = await LikeUser.findOne({
         likerId: likedUserId,
         likedUserId: likerId
@@ -360,21 +343,14 @@ const createLike = async (req, res) => {
         },
       };
 
+      // If mutual like exists, create connection
       if (mutualLike) {
-        console.log("Mutual like found, creating connections");
         const commonAttributes = findCommonAttributes(likerUser, likedUser);
-        console.log('Common attributes calculated:', commonAttributes);
-
         await createSingleConnection(likerId, likedUserId, commonAttributes);
-
         response.data.commonAttributes = commonAttributes;
-        console.log('Connections created successfully');
-      } else {
-        console.log('No mutual like found');
       }
     }
 
-    console.log('Sending response:', response);
     res.status(200).json(response);
   } catch (error) {
     console.error("Error in createLike function:", error);

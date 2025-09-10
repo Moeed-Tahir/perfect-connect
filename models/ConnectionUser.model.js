@@ -16,9 +16,4 @@ const connectionUserSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-connectionUserSchema.index(
-  { users: 1 },
-  { unique: true }
-);
-
 module.exports = mongoose.model('ConnectionUser', connectionUserSchema);
