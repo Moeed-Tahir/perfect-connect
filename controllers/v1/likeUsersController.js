@@ -361,6 +361,7 @@ const createLike = async (req, res) => {
 
 const createSingleConnection = async (userId1, userId2, commonAttributes) => {
   try {
+    // Fetch both users in parallel
     const [user1, user2] = await Promise.all([
       User.findById(userId1),
       User.findById(userId2)
@@ -370,64 +371,66 @@ const createSingleConnection = async (userId1, userId2, commonAttributes) => {
       throw new Error("One or both users not found");
     }
 
-    const sortedUserIds = [userId1, userId2].sort();
+    // Ensure consistent ordering of user IDs
+    const sortedUserIds = [userId1.toString(), userId2.toString()].sort();
+
+    // Convert user docs to plain objects
     const user1Obj = user1.toObject ? user1.toObject() : user1;
     const user2Obj = user2.toObject ? user2.toObject() : user2;
     const userObjects = [user1Obj, user2Obj];
 
+    // Check if connection already exists
     const existingConnection = await ConnectionUser.findOne({
-      users: { 
-        $all: sortedUserIds,
-        $size: 2
-      }
+      users: { $all: sortedUserIds, $size: 2 }
     });
 
     let connection;
 
     if (existingConnection) {
+      // Update existing connection
       connection = await ConnectionUser.findByIdAndUpdate(
         existingConnection._id,
-        { 
-          commonalities: commonAttributes,
-          userObjects: userObjects
+        {
+          commonalities: commonAttributes || { message: "No commonalities found" },
+          userObjects
         },
         { new: true }
       );
-      console.log('Existing connection updated:', connection._id);
+      console.log('✅ Existing connection updated:', connection._id);
     } else {
+      // Create new connection
       connection = await ConnectionUser.create({
         users: sortedUserIds,
-        userObjects: userObjects,
-        commonalities: commonAttributes
+        userObjects,
+        commonalities: commonAttributes || { message: "No commonalities found" }
       });
-      console.log('New connection created:', connection._id);
+      console.log('✅ New connection created:', connection._id);
     }
 
     return connection;
   } catch (error) {
-    console.error("Error creating single connection:", error);
+    console.error("❌ Error creating single connection:", error.message);
     throw error;
   }
 };
 
 const removeConnection = async (userId1, userId2) => {
   try {
+    const sortedUserIds = [userId1.toString(), userId2.toString()].sort();
+
     const result = await ConnectionUser.findOneAndDelete({
-      users: { 
-        $all: [userId1, userId2],
-        $size: 2
-      }
+      users: { $all: sortedUserIds, $size: 2 }
     });
 
     if (!result) {
-      console.log('No connection found to remove');
+      console.log('⚠️ No connection found to remove');
       return null;
     }
 
-    console.log('Connection removed between users');
+    console.log('🗑️ Connection removed between users:', sortedUserIds);
     return result;
   } catch (error) {
-    console.error("Error removing connection:", error);
+    console.error("❌ Error removing connection:", error.message);
     throw error;
   }
 };
