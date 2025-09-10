@@ -283,20 +283,16 @@ const createLike = async (req, res) => {
     let response;
 
     if (existingLike) {
-      // Remove the like
       await LikeUser.findByIdAndDelete(existingLike._id);
 
-      // Update like flag
       await updateLikeFlag(likerUser, mainCategory, subCategory, false);
       await likerUser.save();
 
-      // Check if there was a mutual like
       const mutualLike = await LikeUser.findOne({
         likerId: likedUserId,
         likedUserId: likerId
       });
 
-      // If there was a mutual like, remove the connection
       if (mutualLike) {
         await removeConnection(likerId, likedUserId);
       }
@@ -312,7 +308,6 @@ const createLike = async (req, res) => {
         },
       };
     } else {
-      // Create new like
       const newLike = new LikeUser({
         likerId,
         likedUserId,
@@ -321,11 +316,9 @@ const createLike = async (req, res) => {
       });
       await newLike.save();
 
-      // Update like flag
       await updateLikeFlag(likerUser, mainCategory, subCategory, true);
       await likerUser.save();
 
-      // Check for mutual like
       const mutualLike = await LikeUser.findOne({
         likerId: likedUserId,
         likedUserId: likerId
@@ -343,7 +336,6 @@ const createLike = async (req, res) => {
         },
       };
 
-      // If mutual like exists, create connection
       if (mutualLike) {
         const commonAttributes = findCommonAttributes(likerUser, likedUser);
         await createSingleConnection(likerId, likedUserId, commonAttributes);
@@ -441,14 +433,24 @@ const removeConnection = async (userId1, userId2) => {
 };
 
 const updateLikeFlag = (user, mainCategory, subCategory, value) => {
-  const userSchema = mainCategory === "auPair" ? user.auPair : user.hostFamily;
-
-  if (!userSchema) return;
-
-  const flagName = subCategory + "Like";
-
-  if (flagName in userSchema) {
-    userSchema[flagName] = value;
+  if (mainCategory === "auPair") {
+    if (!user.auPair) return;
+    
+    if (subCategory === "isPairConnect") {
+      user.auPair.isPairConnectLike = value;
+    } else if (subCategory === "isPairHaven") {
+      user.auPair.isPairHavenLike = value;
+    } else if (subCategory === "isPairLink") {
+      user.auPair.isPairLinkLike = value;
+    }
+  } else if (mainCategory === "hostFamily") {
+    if (!user.hostFamily) return;
+    
+    if (subCategory === "isPairConnect") {
+      user.hostFamily.isPairConnectLike = value;
+    } else if (subCategory === "isPairHaven") {
+      user.hostFamily.isPairHavenLike = value;
+    }
   }
 };
 
