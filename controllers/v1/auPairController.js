@@ -276,18 +276,26 @@ const getAllAuPair = async (req, res) => {
     } else if (type === 'pairLink') {
       matchQuery['auPair.isPairLink'] = true;
       matchQuery['auPair.isPairLinkPaused'] = { $ne: true };
+      
+      if (filters.language) {
+        matchQuery['auPair.languages'] = { $in: [filters.language] };
+      }
+      
+      if (filters.usingPairLinkFor && filters.usingPairLinkFor.length > 0) {
+        matchQuery['auPair.usingPairLinkFor'] = { $in: filters.usingPairLinkFor };
+      }
+      
+      if (filters.ageMin || filters.ageMax) {
+        matchQuery['auPair.age'] = {};
+        if (filters.ageMin) matchQuery['auPair.age'].$gte = parseInt(filters.ageMin);
+        if (filters.ageMax) matchQuery['auPair.age'].$lte = parseInt(filters.ageMax);
+      }
     } else {
       return res.status(400).json({ success: false, message: 'Invalid type value' });
     }
 
     if (filters.gender) {
       matchQuery['auPair.gender'] = filters.gender;
-    }
-
-    if (filters.ageMin || filters.ageMax) {
-      matchQuery['auPair.age'] = {};
-      if (filters.ageMin) matchQuery['auPair.age'].$gte = parseInt(filters.ageMin);
-      if (filters.ageMax) matchQuery['auPair.age'].$lte = parseInt(filters.ageMax);
     }
 
     if (filters.availabilityDate) {
@@ -312,7 +320,9 @@ const getAllAuPair = async (req, res) => {
     const reportedUsers = await ReportUser.find({ reporterId: userId }).select('reportedUserId');
     const reportedIds = reportedUsers.map(report => report.reportedUserId);
 
-    matchQuery['_id'] = { $nin: reportedIds };
+    matchQuery['_id'] = { 
+      $nin: [...reportedIds, new mongoose.Types.ObjectId(userId)] 
+    };
 
     const results = await User.aggregate([
       { $match: matchQuery },

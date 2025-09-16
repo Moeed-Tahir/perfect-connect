@@ -251,8 +251,10 @@ const createLike = async (req, res) => {
       });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(likerId) ||
-      !mongoose.Types.ObjectId.isValid(likedUserId)) {
+    if (
+      !mongoose.Types.ObjectId.isValid(likerId) ||
+      !mongoose.Types.ObjectId.isValid(likedUserId)
+    ) {
       console.log('Invalid ObjectId format:', { likerId, likedUserId });
       return res.status(400).json({
         success: false,
@@ -262,7 +264,7 @@ const createLike = async (req, res) => {
 
     const [likerUser, likedUser] = await Promise.all([
       User.findById(likerId),
-      User.findById(likedUserId)
+      User.findById(likedUserId),
     ]);
 
     if (!likerUser || !likedUser) {
@@ -285,12 +287,13 @@ const createLike = async (req, res) => {
     if (existingLike) {
       await LikeUser.findByIdAndDelete(existingLike._id);
 
-      await updateLikeFlag(likerUser, mainCategory, subCategory, false);
+      updateLikeFlag(likedUser, mainCategory, subCategory, false);
+      await likedUser.save();
       await likerUser.save();
 
       const mutualLike = await LikeUser.findOne({
         likerId: likedUserId,
-        likedUserId: likerId
+        likedUserId: likerId,
       });
 
       if (mutualLike) {
@@ -316,12 +319,13 @@ const createLike = async (req, res) => {
       });
       await newLike.save();
 
-      await updateLikeFlag(likerUser, mainCategory, subCategory, true);
+      updateLikeFlag(likedUser, mainCategory, subCategory, true);
+      await likedUser.save();
       await likerUser.save();
 
       const mutualLike = await LikeUser.findOne({
         likerId: likedUserId,
-        likedUserId: likerId
+        likedUserId: likerId,
       });
 
       response = {
@@ -349,7 +353,7 @@ const createLike = async (req, res) => {
     console.error('Error details:', {
       message: error.message,
       stack: error.stack,
-      code: error.code
+      code: error.code,
     });
 
     res.status(500).json({
@@ -436,26 +440,48 @@ const removeConnection = async (userId1, userId2) => {
 };
 
 const updateLikeFlag = (user, mainCategory, subCategory, value) => {
+
   if (mainCategory === "auPair") {
-    if (!user.auPair) return;
-    
+
+    if (!user.auPair) {
+      console.log("No auPair object found in user");
+      return;
+    }
+
     if (subCategory === "isPairConnect") {
       user.auPair.isPairConnectLike = value;
     } else if (subCategory === "isPairHaven") {
       user.auPair.isPairHavenLike = value;
     } else if (subCategory === "isPairLink") {
       user.auPair.isPairLinkLike = value;
+    } else {
+      console.log("Unknown subCategory for auPair:", subCategory);
     }
-  } else if (mainCategory === "hostFamily") {
-    if (!user.hostFamily) return;
-    
+  }
+
+  else if (mainCategory === "hostFamily") {
+
+    if (!user.hostFamily) {
+      return;
+    }
+
     if (subCategory === "isPairConnect") {
       user.hostFamily.isPairConnectLike = value;
     } else if (subCategory === "isPairHaven") {
       user.hostFamily.isPairHavenLike = value;
+    } else {
+      console.log("Unknown subCategory for hostFamily:", subCategory);
     }
   }
+
+  // No matching case
+  else {
+    console.log("No matching case for:", { isAuPair: user.isAuPair, isHostFamily: user.isHostFamily, mainCategory });
+  }
+
+  console.log("Updated user object:", user);
 };
+
 
 const getLikesByReporter = async (req, res) => {
   try {
