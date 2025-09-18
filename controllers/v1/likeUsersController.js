@@ -482,26 +482,46 @@ const updateLikeFlag = (user, mainCategory, subCategory, value) => {
   console.log("Updated user object:", user);
 };
 
-
 const getLikesByReporter = async (req, res) => {
   try {
     const { likerId } = req.body;
 
-    const likes = await LikeUser.find({ likerId })
-      .populate("likedUserId")
+    if (!likerId) {
+      return res.status(400).json({
+        success: false,
+        message: "likerId is required",
+      });
+    }
+
+    const likes = await LikeUser.find({
+      $or: [
+        { likerId },   
+        { likedUserId: likerId }, 
+      ],
+    })
+      .populate({
+        path: "likerId",
+        populate: { path: "hostFamily" }, 
+      })
+      .populate({
+        path: "likedUserId",
+        populate: { path: "hostFamily" }, 
+      })
       .sort({ createdAt: -1 });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: likes.length,
-      data: likes,
+      data: likes, 
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Error in getLikesByReporter:", error);
+    return res.status(500).json({
       success: false,
       message: error.message,
     });
   }
 };
+
 
 module.exports = { createLike, getLikesByReporter };

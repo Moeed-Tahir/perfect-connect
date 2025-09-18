@@ -64,6 +64,15 @@ const OptionalAuPairModelSchema = new mongoose.Schema({
     temperament: String
 }, { _id: false });
 
+const optionalHostFamilySchema = new mongoose.Schema({
+    interest: String,
+    language: String,
+    pet: String,
+    religion: String,
+    parentingStyle: String
+}, { _id: false });
+
+
 // ==================== AU PAIR SCHEMA ====================
 const AuPairModelSchema = new mongoose.Schema({
     // Type Flags
@@ -128,7 +137,8 @@ const AuPairModelSchema = new mongoose.Schema({
 
     // Nested Models
     agency: AgencyModelSchema,
-    location: LocationModelSchema
+    location: LocationModelSchema,
+    optionalHostFamily: optionalHostFamilySchema
 }, { _id: false });
 
 // ==================== HOST FAMILY SCHEMA ====================

@@ -261,11 +261,11 @@ const createHostFamily = async (req, res) => {
 
 const getAllHostFamily = async (req, res) => {
   try {
-    const { 
-      type, 
-      userId, 
-      page = 1, 
-      length = 10, 
+    const {
+      type,
+      userId,
+      page = 1,
+      length = 10,
       pairHeavenFilters = {},
       pairLinkFilters = {},
       pairConnectFilters = {},
@@ -281,13 +281,11 @@ const getAllHostFamily = async (req, res) => {
 
     let reportedIds = [];
     let likedIds = [];
-    
+
     if (userId) {
-      // Get reported users
       const reportedUsers = await ReportUser.find({ reporterId: userId }).select('reportedUserId');
       reportedIds = reportedUsers.map(report => report.reportedUserId);
 
-      // Get liked users if includeLiked is false
       if (!includeLiked) {
         const likedUsers = await LikeUser.find({ userId: userId }).select('likedUserId');
         likedIds = likedUsers.map(like => like.likedUserId);
@@ -307,7 +305,6 @@ const getAllHostFamily = async (req, res) => {
         _id: { $nin: reportedIds }
       };
 
-      // Exclude liked users if includeLiked is false
       if (!includeLiked && likedIds.length > 0) {
         matchConditions._id.$nin = [...matchConditions._id.$nin, ...likedIds];
       }
@@ -321,14 +318,13 @@ const getAllHostFamily = async (req, res) => {
       }
       filters = pairHeavenFilters;
       matchConditions = {
-        _id: new mongoose.Types.ObjectId(userId), // FIXED: Added 'new' keyword
+        _id: new mongoose.Types.ObjectId(userId),
         isHostFamily: true,
         'hostFamily.isPairHaven': true,
         'hostFamily.isPairHavenPaused': { $ne: true },
         _id: { $nin: reportedIds }
       };
 
-      // Exclude liked users if includeLiked is false
       if (!includeLiked && likedIds.length > 0) {
         matchConditions._id.$nin = [...matchConditions._id.$nin, ...likedIds];
       }
@@ -339,14 +335,18 @@ const getAllHostFamily = async (req, res) => {
         isAuPair: true,
         'auPair.isPairLink': true,
         'auPair.isPairLinkPaused': { $ne: true },
-        _id: { $nin: reportedIds }
+        _id: {
+          $nin: [...reportedIds]
+        }
       };
 
-      // Exclude liked users if includeLiked is false
       if (!includeLiked && likedIds.length > 0) {
         matchConditions._id.$nin = [...matchConditions._id.$nin, ...likedIds];
       }
 
+      if (userId) {
+        matchConditions._id.$nin = [...matchConditions._id.$nin, new mongoose.Types.ObjectId(userId)];
+      }
     } else {
       return res.status(400).json({
         success: false,
@@ -354,7 +354,6 @@ const getAllHostFamily = async (req, res) => {
       });
     }
 
-    // Apply filters based on type
     if (type === 'pairConnect') {
       const {
         numberOfChildren,
@@ -435,7 +434,6 @@ const getAllHostFamily = async (req, res) => {
       }
     }
 
-    // Execute query based on type
     if (type === 'pairConnect') {
       results = await User.aggregate([
         {
@@ -452,7 +450,6 @@ const getAllHostFamily = async (req, res) => {
         .lean();
     }
 
-    // Get total count for pagination
     let totalCount = 0;
     if (type === 'pairConnect') {
       totalCount = await User.countDocuments(matchConditions);
@@ -605,52 +602,52 @@ const unpauseHostFamily = async (req, res) => {
 };
 
 const likeHostFamilyProfile = async (req, res) => {
-    try {
-        const { userId, status } = req.body;
+  try {
+    const { userId, status } = req.body;
 
-        if (!userId || typeof status !== 'boolean') {
-            return res.status(400).json({
-                success: false,
-                message: "userId and status (true/false) are required"
-            });
-        }
-
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            });
-        }
-
-        if (!user.isHostFamily || !user.hostFamily) {
-            return res.status(400).json({
-                success: false,
-                message: "This user does not have a Host Family profile"
-            });
-        }
-
-        user.hostFamily.likeProfile = status;
-        await user.save();
-
-        return res.status(200).json({
-            success: true,
-            message: `Host Family profile ${status ? 'liked' : 'unliked'} successfully`,
-            data: {
-                userId: user._id,
-                likeProfile: user.hostFamily.likeProfile
-            }
-        });
-
-    } catch (error) {
-        console.error("Error in likeHostFamilyProfile:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal Server Error",
-            error: error.message
-        });
+    if (!userId || typeof status !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: "userId and status (true/false) are required"
+      });
     }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    if (!user.isHostFamily || !user.hostFamily) {
+      return res.status(400).json({
+        success: false,
+        message: "This user does not have a Host Family profile"
+      });
+    }
+
+    user.hostFamily.likeProfile = status;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Host Family profile ${status ? 'liked' : 'unliked'} successfully`,
+      data: {
+        userId: user._id,
+        likeProfile: user.hostFamily.likeProfile
+      }
+    });
+
+  } catch (error) {
+    console.error("Error in likeHostFamilyProfile:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message
+    });
+  }
 };
 
 
-module.exports = { likeHostFamilyProfile,createHostFamily, getAllHostFamily, pauseHostFamily, unpauseHostFamily };
+module.exports = { likeHostFamilyProfile, createHostFamily, getAllHostFamily, pauseHostFamily, unpauseHostFamily };

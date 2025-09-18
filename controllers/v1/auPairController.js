@@ -10,6 +10,8 @@ const s3 = new AWS.S3({
   region: 'us-east-2'
 });
 
+
+
 const createAuPairProfile = async (req, res) => {
   try {
     const parseIfString = (value) => {
@@ -46,7 +48,7 @@ const createAuPairProfile = async (req, res) => {
       aboutYourJourney,
       aboutYourself,
       aboutAuPair,
-      usingPairLinkFor,
+      usingPairLinkFor = [],
       isFluent,
       profileImage = "",
       images = [],
@@ -58,7 +60,8 @@ const createAuPairProfile = async (req, res) => {
       favSpots = [],
       whatMakesMeSmile,
       agency,
-      location
+      location,
+      optionalHostFamily 
     } = req.body;
 
     agency = parseIfString(agency);
@@ -70,8 +73,8 @@ const createAuPairProfile = async (req, res) => {
     temperament = parseIfString(temperament);
     thingsILove = parseIfString(thingsILove);
     favSpots = parseIfString(favSpots);
+    optionalHostFamily = parseIfString(optionalHostFamily); 
 
-    // Validate userId
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({
         success: false,
@@ -175,6 +178,14 @@ const createAuPairProfile = async (req, res) => {
       description: ""
     };
 
+    const defaultOptionalHostFamily = {
+      interest: "",
+      language: "",
+      pet: "",
+      religion: "",
+      parentingStyle: ""
+    };
+
     const updatedAuPair = {
       ...existingUser.auPair?.toObject(),
       isPairConnect: isPairConnect ?? existingUser.auPair?.isPairConnect,
@@ -198,7 +209,7 @@ const createAuPairProfile = async (req, res) => {
       aboutYourJourney: aboutYourJourney ?? existingUser.auPair?.aboutYourJourney,
       aboutYourself: aboutYourself ?? existingUser.auPair?.aboutYourself,
       aboutAuPair: aboutAuPair ?? existingUser.auPair?.aboutAuPair,
-      usingPairLinkFor: usingPairLinkFor ?? existingUser.auPair?.usingPairLinkFor,
+      usingPairLinkFor: ensureArray(usingPairLinkFor) || existingUser.auPair?.usingPairLinkFor || [],
       isFluent: isFluent ?? existingUser.auPair?.isFluent,
       
       profileImage: profileImage || existingUser.auPair?.profileImage,
@@ -227,6 +238,12 @@ const createAuPairProfile = async (req, res) => {
         ...defaultLocation,
         ...(existingUser.auPair?.location || {}),
         ...(location || {})
+      },
+
+      optionalHostFamily: {
+        ...defaultOptionalHostFamily,
+        ...(existingUser.auPair?.optionalHostFamily || {}),
+        ...(optionalHostFamily || {})
       }
     };
 
@@ -314,6 +331,31 @@ const getAllAuPair = async (req, res) => {
       matchQuery['auPair.abilityToDrive'] = filters.driving;
     }
 
+    // NEW: Add optionalHostFamily filtering if provided
+    if (filters.optionalHostFamily) {
+      const optionalFilters = filters.optionalHostFamily;
+      
+      if (optionalFilters.interest) {
+        matchQuery['auPair.optionalHostFamily.interest'] = optionalFilters.interest;
+      }
+      
+      if (optionalFilters.language) {
+        matchQuery['auPair.optionalHostFamily.language'] = optionalFilters.language;
+      }
+      
+      if (optionalFilters.pet) {
+        matchQuery['auPair.optionalHostFamily.pet'] = optionalFilters.pet;
+      }
+      
+      if (optionalFilters.religion) {
+        matchQuery['auPair.optionalHostFamily.religion'] = optionalFilters.religion;
+      }
+      
+      if (optionalFilters.parentingStyle) {
+        matchQuery['auPair.optionalHostFamily.parentingStyle'] = optionalFilters.parentingStyle;
+      }
+    }
+
     const user = await User.findById(userId).select('likedAuPairs');
     const likedIds = user?.likedAuPairs || [];
 
@@ -391,7 +433,6 @@ const uploadTestImageToS3 = async (req, res) => {
 const pauseAuFamily = async (req, res) => {
   try {
     const { userId, type } = req.body;
-    console.log("type", type);
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({
